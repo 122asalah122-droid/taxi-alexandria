@@ -839,14 +839,11 @@ export function buildAllAlexandriaLandmarks(
     const bridgeRoadTex = createRoadTexture(maxAnisotropy, 10);
     const deckMesh = new THREE.Mesh(
       deckGeo,
-      new THREE.MeshStandardMaterial({
+      new THREE.MeshBasicMaterial({
         map: bridgeRoadTex,
-        roughness: 0.96,
-        metalness: 0,
-        envMapIntensity: 0,
+        fog: false,
       }),
     );
-    deckMesh.receiveShadow = true;
     bridgeGroup.add(deckMesh);
 
     const stanleyCupolaTex = createMosqueDomeTexture('#F6D89E', '#B45309', '#0E7490', maxAnisotropy);

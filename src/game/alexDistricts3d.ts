@@ -445,11 +445,9 @@ export function buildAlexDistrictEnvironment(
     }
 
     // Full Inland Urban Ground Plane (NO CORNICHE / NO SEA — bustling Alexandrian avenue on BOTH sides!)
-    const aqGroundMat = new THREE.MeshStandardMaterial({
-      color: isNight ? 0x222220 : isSunset ? 0x4b4238 : 0x57534e,
-      roughness: 0.96,
-      metalness: 0,
-      envMapIntensity: 0,
+    const aqGroundMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      fog: false,
     });
     const aqGround = new THREE.Mesh(new THREE.PlaneGeometry(760, 4200), aqGroundMat);
     aqGround.rotation.x = -Math.PI / 2;
@@ -1467,11 +1465,9 @@ export function buildAlexDistrictEnvironment(
   // ============================================================================
   else if (districtId === 'ras_el_soda_victoria') {
     // Full Inland Urban Ground Plane (NO SEA — bustling Alexandrian city on BOTH sides!)
-    const urbanGroundMat = new THREE.MeshStandardMaterial({
-      color: isNight ? 0x222220 : isSunset ? 0x4b4238 : 0x57534e,
-      roughness: 0.96,
-      metalness: 0,
-      envMapIntensity: 0,
+    const urbanGroundMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      fog: false,
     });
     const urbanGround = new THREE.Mesh(new THREE.PlaneGeometry(760, 4200), urbanGroundMat);
     urbanGround.rotation.x = -Math.PI / 2;
@@ -1856,11 +1852,9 @@ export function buildAlexDistrictEnvironment(
     const dummy = new THREE.Object3D();
 
     // 1. Massive Continuous Inland Urban Ground Plane (ZERO SEA — city on both sides!)
-    const sgGroundMat = new THREE.MeshStandardMaterial({
-      color: isNight ? 0x222220 : isSunset ? 0x4b4238 : 0x57534e,
-      roughness: 0.96,
-      metalness: 0,
-      envMapIntensity: 0,
+    const sgGroundMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      fog: false,
     });
     const sgGround = new THREE.Mesh(new THREE.PlaneGeometry(980, 4400), sgGroundMat);
     sgGround.rotation.x = -Math.PI / 2;
@@ -1868,26 +1862,21 @@ export function buildAlexDistrictEnvironment(
     group.add(sgGround);
 
     // 2. Drivable Parallel Side Bypass Street ("الشارع الجانبي الهادئ بعيد عن الزحام")
-    // Runs smoothly alongside the right side of the main boulevard (x = +10.1 .. +16.6)
+    // Pure solid black #000000 with crisp white #FFFFFF dashed lines & forward arrow
     const sideRoadCanvas = document.createElement('canvas');
     sideRoadCanvas.width = 256;
     sideRoadCanvas.height = 512;
     const srCtx = sideRoadCanvas.getContext('2d')!;
-    srCtx.fillStyle = '#080808';
+    srCtx.fillStyle = '#000000';
     srCtx.fillRect(0, 0, 256, 512);
-    // Subtle pure-black asphalt grain
-    for (let i = 0; i < 420; i++) {
-      srCtx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.16)';
-      srCtx.fillRect((i * 73) % 256, (i * 137) % 512, 3, 4);
-    }
     // Crisp pure white outer edge lines on both sides
     srCtx.fillStyle = '#FFFFFF';
-    srCtx.fillRect(10, 0, 10, 512);
-    srCtx.fillRect(236, 0, 10, 512);
-    // Center dashed pure white stripe for 2 calm side-street lanes
+    srCtx.fillRect(8, 0, 10, 512);
+    srCtx.fillRect(238, 0, 10, 512);
+    // Center dashed pure white stripe
     srCtx.fillStyle = '#FFFFFF';
-    for (let y = 18; y < 512; y += 78) {
-      srCtx.fillRect(123, y, 10, 44);
+    for (let y = 18; y < 512; y += 96) {
+      srCtx.fillRect(123, y, 10, 52);
     }
     const sideRoadTex = new THREE.CanvasTexture(sideRoadCanvas);
     sideRoadTex.wrapS = THREE.RepeatWrapping;
@@ -1896,11 +1885,9 @@ export function buildAlexDistrictEnvironment(
     sideRoadTex.anisotropy = maxAnisotropy;
     textures.push(sideRoadTex);
 
-    const sideRoadMat = new THREE.MeshStandardMaterial({
+    const sideRoadMat = new THREE.MeshBasicMaterial({
       map: sideRoadTex,
-      roughness: 0.98,
-      metalness: 0,
-      envMapIntensity: 0,
+      fog: false,
     });
     const sideRoadGeo = createCurvedRibbonGeometry(
       9.65,
@@ -1915,17 +1902,25 @@ export function buildAlexDistrictEnvironment(
       'sidi_gaber_abuqir',
     );
     const sideRoadMesh = new THREE.Mesh(sideRoadGeo, sideRoadMat);
-    sideRoadMesh.receiveShadow = !isMobile;
     group.add(sideRoadMesh);
 
-    // Outer Right City Sidewalk (x = +16.75 .. +21.6) flanking the side bypass street
-    const rightSidewalkMat = new THREE.MeshStandardMaterial({
-      color: isNight ? 0x52504c : 0xd2cfc9,
-      roughness: 0.92,
-      metalness: 0,
-      envMapIntensity: 0,
-      emissive: isNight ? 0x222120 : 0x000000,
-      emissiveIntensity: isNight ? 0.2 : 0,
+    // Outer Right City Sidewalk (x = +16.75 .. +21.6) — pure black with white edge
+    const rightSidewalkCanvas = document.createElement('canvas');
+    rightSidewalkCanvas.width = 128;
+    rightSidewalkCanvas.height = 128;
+    const rswCtx = rightSidewalkCanvas.getContext('2d')!;
+    rswCtx.fillStyle = '#000000';
+    rswCtx.fillRect(0, 0, 128, 128);
+    rswCtx.fillStyle = '#FFFFFF';
+    rswCtx.fillRect(0, 0, 12, 128);
+    const rightSidewalkTex = new THREE.CanvasTexture(rightSidewalkCanvas);
+    rightSidewalkTex.colorSpace = THREE.SRGBColorSpace;
+    rightSidewalkTex.wrapS = THREE.RepeatWrapping;
+    rightSidewalkTex.wrapT = THREE.RepeatWrapping;
+    textures.push(rightSidewalkTex);
+    const rightSidewalkMat = new THREE.MeshBasicMaterial({
+      map: rightSidewalkTex,
+      fog: false,
     });
     const rightWalkGeo = createCurvedRibbonGeometry(
       16.85,
@@ -2012,19 +2007,13 @@ export function buildAlexDistrictEnvironment(
 
     // 3. Intersecting Cross Side Streets ("شوارع جانبية متفرعة يمين وشمال") cutting between city blocks!
     const crossStreetZs = [-380, -760, -960, -1380, -1620, -1960, -2140, -2450, -2860, -3100, -3260, -3380];
-    const crossAsphaltMat = new THREE.MeshStandardMaterial({
-      color: 0x080808,
-      roughness: 0.98,
-      metalness: 0,
-      envMapIntensity: 0,
+    const crossAsphaltMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      fog: false,
     });
-    const crossStripeMat = new THREE.MeshStandardMaterial({
+    const crossStripeMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
-      roughness: 0.9,
-      metalness: 0,
-      envMapIntensity: 0,
-      emissive: isNight ? 0x808080 : 0x000000,
-      emissiveIntensity: isNight ? 0.28 : 0,
+      fog: false,
     });
     const crossRoadGeo = new THREE.PlaneGeometry(118, 12.4);
     crossRoadGeo.rotateX(-Math.PI / 2);
@@ -2571,11 +2560,9 @@ export function buildAlexDistrictEnvironment(
     group.add(seaSector1, seaSector5);
 
     // B) Solid Inland Urban Ground Plane ONLY across Sectors 2, 3, 4 (Abu Qir + Sidi Gaber + Ras El-Soda/Victoria)
-    const inlandGroundMat = new THREE.MeshStandardMaterial({
-      color: isNight ? 0x222220 : isSunset ? 0x4b4238 : 0x57534e,
-      roughness: 0.96,
-      metalness: 0,
-      envMapIntensity: 0,
+    const inlandGroundMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      fog: false,
     });
     const inlandGround = new THREE.Mesh(new THREE.PlaneGeometry(920, 3680), inlandGroundMat);
     inlandGround.rotation.x = -Math.PI / 2;
@@ -2795,7 +2782,7 @@ export function buildAlexDistrictEnvironment(
     grandSideCanvas.width = 256;
     grandSideCanvas.height = 512;
     const gsCtx = grandSideCanvas.getContext('2d')!;
-    gsCtx.fillStyle = '#080808';
+    gsCtx.fillStyle = '#000000';
     gsCtx.fillRect(0, 0, 256, 512);
     gsCtx.fillStyle = '#FFFFFF';
     gsCtx.fillRect(10, 0, 10, 512);
@@ -2810,11 +2797,9 @@ export function buildAlexDistrictEnvironment(
     grandSideTex.anisotropy = maxAnisotropy;
     textures.push(grandSideTex);
 
-    const sideRoadMat = new THREE.MeshStandardMaterial({
+    const sideRoadMat = new THREE.MeshBasicMaterial({
       map: grandSideTex,
-      roughness: 0.98,
-      metalness: 0,
-      envMapIntensity: 0,
+      fog: false,
     });
     group.add(new THREE.Mesh(sideRoadGeo, sideRoadMat));
 

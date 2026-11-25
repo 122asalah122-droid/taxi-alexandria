@@ -131,13 +131,9 @@ export function buildCornicheGasStations(
     : GAS_STATIONS;
 
   // Shared materials for minimal GPU state switches & fast mobile rendering
-  const concretePadMat = new THREE.MeshStandardMaterial({
-    color: 0x7d7a75,
-    roughness: 0.92,
-    metalness: 0,
-    envMapIntensity: 0,
-    emissive: isNight ? 0x242321 : 0x000000,
-    emissiveIntensity: isNight ? 0.25 : 0,
+  const concretePadMat = new THREE.MeshBasicMaterial({
+    color: 0x000000,
+    fog: false,
   });
   const quayStoneMat = new THREE.MeshStandardMaterial({
     color: 0xc2b299,

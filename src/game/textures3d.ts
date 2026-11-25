@@ -6,53 +6,42 @@ export function createRoadTexture(maxAnisotropy: number, repeatY = 1): THREE.Can
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
 
-  // Pure deep matte black asphalt tarmac (black & white markings ONLY)
-  ctx.fillStyle = '#080808';
+  // Pure flat solid black asphalt (#000000) — zero blue, zero grey wash, zero glare
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, 512, 512);
 
-  // Subtle pure-black tire-wear tracks in 2 oncoming + 3 forward lanes
-  const laneCenters = [64, 158, 294, 382, 466];
-  for (const cx of laneCenters) {
-    const grad = ctx.createLinearGradient(cx - 32, 0, cx + 32, 0);
-    grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(0.3, 'rgba(0,0,0,0.45)');
-    grad.addColorStop(0.5, 'rgba(18,18,18,0.16)');
-    grad.addColorStop(0.7, 'rgba(0,0,0,0.45)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(cx - 32, 0, 64, 512);
-  }
-
-  // Fine dark black mineral asphalt aggregate grain (strictly pure black/charcoal)
-  let seed = 1337;
-  const rand = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
-  for (let i = 0; i < 6500; i++) {
-    const x = rand() * 512;
-    const y = rand() * 512;
-    const shade = 6 + Math.floor(rand() * 12);
-    ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
-    ctx.fillRect(x, y, 2, 2);
-  }
-
-  // Crisp pure white outer shoulder lines & white median safety lines
+  // Crisp pure white (#FFFFFF) outer road edge lines
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(10, 0, 8, 512);
-  ctx.fillRect(494, 0, 8, 512);
+  ctx.fillRect(6, 0, 10, 512);
+  ctx.fillRect(496, 0, 10, 512);
 
+  // Crisp pure white (#FFFFFF) dashed center & traffic lane divider lines
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(202, 0, 6, 512);
-  ctx.fillRect(247, 0, 6, 512);
-
-  // Crisp pure white dashed traffic lane dividers
-  ctx.fillStyle = '#FFFFFF';
-  for (const lx of [111, 336, 422]) {
-    for (let y = 12; y < 512; y += 128) {
-      ctx.fillRect(lx - 4.5, y, 9, 72);
+  for (const lx of [111, 224, 332, 428]) {
+    const lw = lx === 224 ? 12 : 9;
+    for (let y = 16; y < 512; y += 128) {
+      ctx.fillRect(lx - lw * 0.5, y, lw, 74);
     }
   }
+
+  // Big bold pure white (#FFFFFF) forward arrow pointing straight ahead (Montaza Palace -> Bahary)
+  // On 3D road ribbon (flipY = true), upward on canvas (-Y) maps directly forward (-Z toward Bahary)
+  const drawForwardArrow = (cx: number) => {
+    ctx.fillStyle = '#FFFFFF';
+    // Large sharp triangular arrowhead
+    ctx.beginPath();
+    ctx.moveTo(cx, 62);
+    ctx.lineTo(cx + 38, 178);
+    ctx.lineTo(cx + 15, 178);
+    ctx.lineTo(cx + 15, 366);
+    ctx.lineTo(cx - 15, 366);
+    ctx.lineTo(cx - 15, 178);
+    ctx.lineTo(cx - 38, 178);
+    ctx.closePath();
+    ctx.fill();
+  };
+  drawForwardArrow(380);
+  drawForwardArrow(280);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -69,17 +58,9 @@ export function createYellowBlackCurbTexture(maxAnisotropy: number): THREE.Canva
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
 
-  // Razor-sharp alternating Alexandria Yellow & Black curb segments
-  const blockH = 64;
-  for (let y = 0; y < 512; y += blockH) {
-    const isYellow = (y / blockH) % 2 === 0;
-    ctx.fillStyle = isYellow ? '#FACC15' : '#1C1C1C';
-    ctx.fillRect(0, y, 128, blockH);
-
-    // Subtle crisp bevel joint line between painted curb stones
-    ctx.fillStyle = isYellow ? 'rgba(180, 120, 0, 0.35)' : 'rgba(255, 255, 255, 0.08)';
-    ctx.fillRect(0, y + blockH - 3, 128, 3);
-  }
+  // Crisp pure white (#FFFFFF) sidewalk curb edge framing the black sidewalks
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, 128, 512);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -95,67 +76,12 @@ export function createCornichePromenadeTexture(maxAnisotropy: number): THREE.Can
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
 
-  // Grout / mortar base
-  ctx.fillStyle = '#9E9B95';
+  // Pure solid black (#000000) right sidewalk with crisp white (#FFFFFF) outer border edge
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, 512, 512);
-
-  // Interlocking Checkered Basketweave Brick Pattern: Terracotta Red & Light Grey
-  const cell = 64; // 8x8 cells per 512px tile (4 interlocking brick pairs)
-  const terracottaTones = ['#BA4D3B', '#A94232', '#C55A47'];
-  const greyTones = ['#D6D3CE', '#C9C6C0', '#E0DDD8'];
-
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const x = col * cell;
-      const y = row * cell;
-      const isTerracotta = (row + col) % 2 === 0;
-      const isHorizontalSplit = (row + col) % 2 === 0;
-      const palette = isTerracotta ? terracottaTones : greyTones;
-
-      if (isHorizontalSplit) {
-        // Two horizontal interlocking bricks filling the square
-        for (let b = 0; b < 2; b++) {
-          const bx = x + 3;
-          const by = y + b * 32 + 3;
-          const bw = cell - 6;
-          const bh = 26;
-          ctx.fillStyle = palette[(row * 3 + col + b) % palette.length];
-          ctx.fillRect(bx, by, bw, bh);
-          ctx.fillStyle = 'rgba(255,255,255,0.14)';
-          ctx.fillRect(bx, by, bw, 3);
-          ctx.fillStyle = 'rgba(0,0,0,0.14)';
-          ctx.fillRect(bx, by + bh - 3, bw, 3);
-        }
-      } else {
-        // Two vertical interlocking bricks filling the alternating square
-        for (let b = 0; b < 2; b++) {
-          const bx = x + b * 32 + 3;
-          const by = y + 3;
-          const bw = 26;
-          const bh = cell - 6;
-          ctx.fillStyle = palette[(row + col * 3 + b) % palette.length];
-          ctx.fillRect(bx, by, bw, bh);
-          ctx.fillStyle = 'rgba(255,255,255,0.14)';
-          ctx.fillRect(bx, by, 3, bh);
-          ctx.fillStyle = 'rgba(0,0,0,0.14)';
-          ctx.fillRect(bx + bw - 3, by, 3, bh);
-        }
-      }
-    }
-  }
-
-  // Subtle coastal paver stone grain
-  let seed = 4242;
-  const rand = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
-  for (let i = 0; i < 2400; i++) {
-    const px = rand() * 512;
-    const py = rand() * 512;
-    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-    ctx.fillRect(px, py, 2, 2);
-  }
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, 26, 512);
+  ctx.fillRect(486, 0, 26, 512);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -171,19 +97,11 @@ export function createSidewalkTexture(maxAnisotropy: number): THREE.CanvasTextur
   canvas.height = 256;
   const ctx = canvas.getContext('2d')!;
 
-  ctx.fillStyle = '#9C9891';
+  // Pure solid black (#000000) left sidewalk with crisp white (#FFFFFF) street-side border edge
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, 256, 256);
-
-  const cell = 32;
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const isTerra = (r + c) % 2 === 0;
-      ctx.fillStyle = isTerra ? '#B7503E' : '#D5D2CD';
-      ctx.fillRect(c * cell + 2, r * cell + 2, cell - 4, cell - 4);
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.fillRect(c * cell + 2, r * cell + 2, cell - 4, 2);
-    }
-  }
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(236, 0, 20, 256);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -200,7 +118,7 @@ export function createCrosswalkTexture(maxAnisotropy: number): THREE.CanvasTextu
   const ctx = canvas.getContext('2d')!;
 
   ctx.clearRect(0, 0, 512, 128);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.fillStyle = '#FFFFFF';
   for (let x = 14; x < 496; x += 38) {
     ctx.fillRect(x, 12, 22, 104);
   }

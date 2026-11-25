@@ -1014,13 +1014,13 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
         );
     };
 
-    // Mediterranean Sea strictly OUTSIDE the Corniche seawall (x >= roadCenterX + 14.8) so zero sea geometry ever exists beneath the asphalt road or sidewalks!
+    // Mediterranean Sea strictly OUTSIDE the Corniche seawall (x >= roadCenterX + 15.2) with tight curve tracking so zero sea ever touches the black road or sidewalks!
     const seaWidth = 510;
     const seaGeo = new THREE.PlaneGeometry(
       seaWidth,
       ROUTE_SPAN + 260,
       isMobileDevice ? 24 : 72,
-      isMobileDevice ? 110 : 260,
+      isMobileDevice ? 220 : 320,
     );
     const seaPosAttr = seaGeo.attributes.position;
     for (let i = 0; i < seaPosAttr.count; i++) {
@@ -1028,7 +1028,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       const localY = seaPosAttr.getY(i);
       const u = (localX + seaWidth * 0.5) / seaWidth;
       const worldZ = ROUTE_MID_Z - localY;
-      seaPosAttr.setX(i, getRoadCenterX(worldZ) + 14.8 + u * seaWidth);
+      seaPosAttr.setX(i, getRoadCenterX(worldZ) + 15.2 + u * seaWidth);
     }
     seaPosAttr.needsUpdate = true;
     seaGeo.computeBoundingBox();
@@ -1181,35 +1181,20 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       1,
       0.065,
     );
-    const roadMat = isMobileDevice
-      ? new THREE.MeshStandardMaterial({
-          map: roadTex,
-          roughness: 0.98,
-          metalness: 0,
-          envMapIntensity: 0,
-        })
-      : new THREE.MeshStandardMaterial({
-          map: roadTex,
-          roughnessMap: roadRoughTex,
-          normalMap: roadNormalTex,
-          normalScale: new THREE.Vector2(0.2, 0.2),
-          roughness: 0.98,
-          metalness: 0,
-          envMapIntensity: 0,
-        });
+    // Unlit pure flat #000000 black road with crisp #FFFFFF dashed lines & forward arrows (zero sky/sea reflection, zero shine, zero fog tint)
+    const roadMat = new THREE.MeshBasicMaterial({
+      map: roadTex,
+      fog: false,
+    });
     const roadMesh = new THREE.Mesh(roadGeo, roadMat);
-    roadMesh.receiveShadow = !lowSpecOrMobile;
     scene.add(roadMesh);
 
-    const cityGroundMat = new THREE.MeshStandardMaterial({
-      color: 0xc8bca4,
-      roughness: 0.96,
-      metalness: 0,
-      envMapIntensity: 0,
+    const cityGroundMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      fog: false,
     });
 
-    // 3. Classic Alexandria Corniche Promenade (Terracotta & Light Grey Interlocking Tiles),
-    //    Sharp Yellow-Black Striped Curbs, and Open Stone-Pillar + Ornate Iron Railing Seawall
+    // 3. Pure Black Sidewalks (#000000) with Crisp White Edges (#FFFFFF), Zero Reflection
     const corniStoneTex = createStoneMasonryTexture('#E4DAC7', '#AFA28A', maxAniso);
     corniStoneTex.repeat.set(1, 1);
     const corniWallMat = new THREE.MeshStandardMaterial({
@@ -1230,31 +1215,23 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       roughness: 0.42,
     });
     const yellowBlackCurbTex = createYellowBlackCurbTexture(maxAniso);
-    const yellowBlackCurbMat = new THREE.MeshStandardMaterial({
+    const yellowBlackCurbMat = new THREE.MeshBasicMaterial({
       map: yellowBlackCurbTex,
-      roughness: 0.86,
-      metalness: 0,
-      envMapIntensity: 0,
+      fog: false,
     });
-    const medianGrassMat = new THREE.MeshStandardMaterial({
-      color: 0x2f6b18,
-      roughness: 0.95,
-      metalness: 0,
-      envMapIntensity: 0,
+    const medianGrassMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      fog: false,
     });
     const corniPromTex = createCornichePromenadeTexture(maxAniso);
-    const corniPromMat = new THREE.MeshStandardMaterial({
+    const corniPromMat = new THREE.MeshBasicMaterial({
       map: corniPromTex,
-      roughness: 0.92,
-      metalness: 0,
-      envMapIntensity: 0,
+      fog: false,
     });
     const sidewalkTex = createSidewalkTexture(maxAniso);
-    const sidewalkMat = new THREE.MeshStandardMaterial({
+    const sidewalkMat = new THREE.MeshBasicMaterial({
       map: sidewalkTex,
-      roughness: 0.92,
-      metalness: 0,
-      envMapIntensity: 0,
+      fog: false,
     });
 
     const roadSegments = isUrbanCircuitTrack
@@ -1270,8 +1247,8 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       const cityGroundSegMesh = new THREE.Mesh(cityGroundSegGeo, cityGroundMat);
       cityGroundSegMesh.receiveShadow = true;
 
-      // Coastal Terracotta & Light Grey Interlocking Tile Promenade on RIGHT (+X, Sea Side)
-      const promGeo = createCurvedRibbonGeometry(10.04, 14.6, seg.zStart, seg.zEnd, 5, () => 0.28, 2, 0.26);
+      // Coastal Black Promenade (#000000) with crisp White Edge (#FFFFFF) on RIGHT (+X, Sea Side)
+      const promGeo = createCurvedRibbonGeometry(10.04, 14.6, seg.zStart, seg.zEnd, 5, () => 0.28, 1, 0.26);
       const promMesh = new THREE.Mesh(promGeo, corniPromMat);
       promMesh.receiveShadow = true;
 
@@ -1384,7 +1361,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
         seg.zEnd,
         5,
         (z) => (isPostStanleyRightZone(z) ? -1.35 : 0.24),
-        4,
+        1,
         0.26,
       );
       const cityCurbTopGeo = createCurvedRibbonGeometry(
@@ -1564,14 +1541,14 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       uturnRoadCanvas.width = 256;
       uturnRoadCanvas.height = 256;
       const uCtx = uturnRoadCanvas.getContext('2d')!;
-      uCtx.fillStyle = '#080808';
+      uCtx.fillStyle = '#000000';
       uCtx.fillRect(0, 0, 256, 256);
       uCtx.strokeStyle = '#FFFFFF';
       uCtx.lineWidth = 10;
       uCtx.setLineDash([18, 12]);
       uCtx.strokeRect(8, 8, 240, 240);
       uCtx.setLineDash([]);
-      // Bold painted white curved U-turn arrow on black asphalt
+      // Bold painted white curved U-turn arrow on pure black asphalt
       uCtx.strokeStyle = '#FFFFFF';
       uCtx.lineWidth = 16;
       uCtx.lineCap = 'round';
@@ -1614,11 +1591,9 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       uturnSignTex.anisotropy = maxAniso;
       extraTexturesToDispose.push(uturnSignTex);
 
-      const uturnPadMat = new THREE.MeshStandardMaterial({
+      const uturnPadMat = new THREE.MeshBasicMaterial({
         map: uturnRoadTex,
-        roughness: 0.96,
-        metalness: 0,
-        envMapIntensity: 0,
+        fog: false,
         polygonOffset: true,
         polygonOffsetFactor: -2,
         polygonOffsetUnits: -2,
@@ -1689,11 +1664,9 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
           envMapIntensity: 0,
         });
         const gantrySteelMat = new THREE.MeshStandardMaterial({ color: 0x525252, metalness: 0.5, roughness: 0.45 });
-        const slipAsphaltMat = new THREE.MeshStandardMaterial({
-          color: 0x080808,
-          roughness: 0.98,
-          metalness: 0,
-          envMapIntensity: 0,
+        const slipAsphaltMat = new THREE.MeshBasicMaterial({
+          color: 0x000000,
+          fog: false,
         });
         const bridgeLampGlobeMat = new THREE.MeshBasicMaterial({
           color: atmosphere === 'night' ? 0xfff0b3 : 0xfef3c7,
@@ -2442,74 +2415,15 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       scene.add(haloMesh);
     }
 
-    // 1-Draw-Call Instanced Warm Golden Streetlamp Light Pools + Volumetric Downward Light Cones at Night!
-    if (atmosphere === 'night' || atmosphere === 'sunset') {
-      const streetPoolTex = createStreetLightPoolTexture();
-      extraTexturesToDispose.push(streetPoolTex);
-      const poolGeo = new THREE.PlaneGeometry(1, 1);
-      poolGeo.rotateX(-Math.PI / 2);
-      const poolMat = new THREE.MeshBasicMaterial({
-        map: streetPoolTex,
-        color: atmosphere === 'night' ? 0xffe4a0 : 0xffd584,
-        transparent: true,
-        opacity: atmosphere === 'night' ? 0.94 : 0.34,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -2,
-        polygonOffsetUnits: -2,
-      });
+    // Keep pure #000000 black road & sidewalks completely free of colored ground light pools; show subtle overhead night lamp cones only
+    if (atmosphere === 'night') {
       const totalPools = promLampEntries.length + leftLampEntries.length + medianLampEntries.length;
       if (totalPools > 0) {
-        const poolInst = new THREE.InstancedMesh(poolGeo, poolMat, totalPools);
-        poolInst.renderOrder = 2;
-        let pIdx = 0;
-        for (const le of promLampEntries) {
-          const cosY = Math.cos(le.yaw);
-          const sinY = Math.sin(le.yaw);
-          const inX = -3.6;
-          _dummy.position.set(
-            le.x + inX * cosY,
-            getRoadHeightAt(le.z) + 0.06,
-            le.z - inX * sinY,
-          );
-          _dummy.rotation.set(0, le.yaw, 0);
-          _dummy.scale.set(16.5, 1, 18.5);
-          _dummy.updateMatrix();
-          poolInst.setMatrixAt(pIdx++, _dummy.matrix);
-        }
-        for (const le of leftLampEntries) {
-          const cosY = Math.cos(le.yaw);
-          const sinY = Math.sin(le.yaw);
-          const inX = 2.8;
-          _dummy.position.set(
-            le.x + inX * cosY,
-            getRoadHeightAt(le.z) + 0.06,
-            le.z - inX * sinY,
-          );
-          _dummy.rotation.set(0, le.yaw, 0);
-          _dummy.scale.set(16.5, 1, 18.5);
-          _dummy.updateMatrix();
-          poolInst.setMatrixAt(pIdx++, _dummy.matrix);
-        }
-        for (const le of medianLampEntries) {
-          _dummy.position.set(le.x, getRoadHeightAt(le.z) + 0.065, le.z);
-          _dummy.rotation.set(0, le.yaw, 0);
-          _dummy.scale.set(22.5, 1, 23.0);
-          _dummy.updateMatrix();
-          poolInst.setMatrixAt(pIdx++, _dummy.matrix);
-        }
-        poolInst.computeBoundingSphere();
-        scene.add(poolInst);
-      }
-
-      // Visible downward golden streetlight beam cones at Night (1 draw call!)
-      if (atmosphere === 'night' && totalPools > 0) {
         const coneGeo = new THREE.CylinderGeometry(0.28, 3.3, 5.4, 8, 1, true);
         const coneMat = new THREE.MeshBasicMaterial({
           color: 0xffd57a,
           transparent: true,
-          opacity: 0.11,
+          opacity: 0.09,
           blending: THREE.AdditiveBlending,
           depthWrite: false,
           side: THREE.DoubleSide,
@@ -2859,37 +2773,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
         scene.add(awningBulbInst);
       }
 
-      // Warm Café & Shop Sidewalk Spill-Light Pools at Night so every café glows brightly onto the pavement!
-      if (atmosphere === 'night') {
-        const cafePoolTex = createStreetLightPoolTexture();
-        extraTexturesToDispose.push(cafePoolTex);
-        const cafePoolGeo = new THREE.PlaneGeometry(1, 1);
-        cafePoolGeo.rotateX(-Math.PI / 2);
-        const cafePoolMat = new THREE.MeshBasicMaterial({
-          map: cafePoolTex,
-          color: 0xffd27d,
-          transparent: true,
-          opacity: 0.86,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-          polygonOffset: true,
-          polygonOffsetFactor: -2,
-          polygonOffsetUnits: -2,
-        });
-        const cafePoolInst = new THREE.InstancedMesh(cafePoolGeo, cafePoolMat, shopInstances.length);
-        cafePoolInst.renderOrder = 2;
-        shopInstances.forEach((s, idx) => {
-          const cosY = Math.cos(s.yaw);
-          const sinY = Math.sin(s.yaw);
-          _dummy.position.set(s.frontX + 2.6 * cosY, getRoadHeightAt(s.z) + 0.14, s.z - 2.6 * sinY);
-          _dummy.rotation.set(0, s.yaw, 0);
-          _dummy.scale.set(11.0, 1, 12.0);
-          _dummy.updateMatrix();
-          cafePoolInst.setMatrixAt(idx, _dummy.matrix);
-        });
-        cafePoolInst.computeBoundingSphere();
-        scene.add(cafePoolInst);
-      }
+      // Sidewalk kept solid pure #000000 black with crisp white edge at all times (no colored ground spill pools)
     }
 
     const cafeSpots = shopInstances.filter((s) => s.kind === 'cafe' || s.kind === 'restaurant');

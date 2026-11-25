@@ -387,46 +387,37 @@ export const MotoGarageScreen: React.FC<MotoGarageScreenProps> = ({
     const envGroup = new THREE.Group();
     scene.add(envGroup);
 
-    // 1. Checkered Terracotta & Light Grey Sidewalk Promenade (Bike parked right on it!)
+    // 1. Solid Black Sidewalk (#000000) with Crisp White Edges (#FFFFFF), Zero Reflection
     const sidewalkTex = createCornichePromenadeTexture(maxAniso);
-    sidewalkTex.repeat.set(3, 18);
-    const sidewalkMat = new THREE.MeshStandardMaterial({
+    sidewalkTex.repeat.set(1, 18);
+    const sidewalkMat = new THREE.MeshBasicMaterial({
       map: sidewalkTex,
-      roughness: 0.92,
-      metalness: 0,
-      envMapIntensity: 0,
+      fog: false,
     });
     const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.24, 72), sidewalkMat);
     sidewalk.position.set(0, -0.12, 0);
-    sidewalk.receiveShadow = true;
     envGroup.add(sidewalk);
 
-    // 2. Razor-Sharp Yellow & Black Striped Curb facing the Corniche Road (Right side: +X)
+    // 2. Crisp Pure White Curb Edge facing the Corniche Road (Right side: +X)
     const curbTex = createYellowBlackCurbTexture(maxAniso);
     curbTex.repeat.set(1, 24);
-    const curbMat = new THREE.MeshStandardMaterial({
+    const curbMat = new THREE.MeshBasicMaterial({
       map: curbTex,
-      roughness: 0.86,
-      metalness: 0,
-      envMapIntensity: 0,
+      fog: false,
     });
     const curb = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.28, 72), curbMat);
     curb.position.set(3.62, -0.1, 0);
-    curb.receiveShadow = true;
     envGroup.add(curb);
 
-    // 3. Corniche Asphalt Road adjacent to the sidewalk (+X)
+    // 3. Solid Black Corniche Asphalt Road (#000000) with Pure White Dashed Lines & Forward Arrows (+X)
     const roadTex = createRoadTexture(maxAniso, 12);
-    const roadMat = new THREE.MeshStandardMaterial({
+    const roadMat = new THREE.MeshBasicMaterial({
       map: roadTex,
-      roughness: 0.96,
-      metalness: 0,
-      envMapIntensity: 0,
+      fog: false,
     });
     const road = new THREE.Mesh(new THREE.PlaneGeometry(18, 86), roadMat);
     road.rotation.x = -Math.PI / 2;
     road.position.set(12.6, -0.22, 0);
-    road.receiveShadow = true;
     envGroup.add(road);
 
     // 4. Classic Alexandria Corniche Seawall on Sea Edge (Left side: -X)
