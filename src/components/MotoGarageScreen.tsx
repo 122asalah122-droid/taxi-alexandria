@@ -201,7 +201,7 @@ export const MotoGarageScreen: React.FC<MotoGarageScreenProps> = ({
   const handleBuyAndEquip = () => {
     if (unownedItems.length === 0) {
       onSaveTuning(previewTuning);
-      showToast('تم تثبيت التعديل بنجاح!');
+      showToast('تم تركيب التعديل بنجاح!');
       return;
     }
     if (!canAffordCart) {
@@ -1702,7 +1702,7 @@ export const MotoGarageScreen: React.FC<MotoGarageScreenProps> = ({
                       }`}
                     >
                       <Coins className="w-4 h-4" />
-                      <span>شراء وتثبيت ({totalCartCost} ج.م)</span>
+                      <span>تركيب التعديل ({totalCartCost} ج.م)</span>
                     </button>
                     <button
                       type="button"

@@ -9,7 +9,7 @@ const pwaManifest: Partial<ManifestOptions> = {
   name: 'تكس الإسكندرية — تاكسي الكورنيش',
   short_name: 'تكس إسكندرية',
   description:
-    'لعبة قيادة تاكسي وموتوسيكل الإسكندرية على الكورنيش بدون نت — تعمل بالكامل من ذاكرة الموبايل.',
+    'لعبة قيادة تاكسي وموتوسيكل الإسكندرية على الكورنيش في جولة ثلاثية الأبعاد.',
   theme_color: '#0B121C',
   background_color: '#090D16',
   display: 'standalone',

@@ -25,7 +25,6 @@ import { GameScene3D } from './components/GameScene3D';
 import { GarageView } from './components/GarageView';
 import { LandmarksView } from './components/LandmarksView';
 import { MotoGarageScreen } from './components/MotoGarageScreen';
-import { OfflineIndicator, PWAInstallButton } from './components/PWAInstallButton';
 import { RaceSetupScreen } from './components/RaceSetupScreen';
 import { SeaSoundButton } from './components/SeaSoundButton';
 import {
@@ -605,8 +604,6 @@ export default function App() {
 
               <SeaSoundButton />
 
-              <PWAInstallButton />
-
               <button
                 type="button"
                 onClick={() => setControlsModalOpen(true)}
@@ -843,7 +840,7 @@ export default function App() {
                       مشاوير تاكسي الإسكندرية
                     </h2>
                     <p className="text-xs text-slate-300 mt-0.5">
-                      طوّر تاكسي الإسكندرية (7 مستويات من سهل إلى أسطوري) وافتح المناطق الجديدة بالفلوس!
+                      طوّر تاكسي الإسكندرية (7 مستويات من سهل إلى أسطوري) وافتح المناطق الجديدة برصيد اللعبة!
                     </p>
                   </div>
                 </div>
@@ -867,7 +864,7 @@ export default function App() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <div className="text-xs font-bold text-amber-300">
-                      🚕 تاكسي الإسكندرية المتطور (7 مستويات · يتطور تلقائياً بالدفع)
+                      🚕 تاكسي الإسكندرية المتطور (7 مستويات · يتطور برصيد المشاوير داخل اللعبة)
                     </div>
                     <div className="text-sm sm:text-base font-black text-white mt-0.5">
                       {curTaxi.name} — صعوبة: {curTaxi.difficultyLabel}
@@ -928,7 +925,7 @@ export default function App() {
               {/* 2. Choose or Unlock Alexandria Districts & Ultimate Connected City */}
               <div className="space-y-2">
                 <div className="text-xs font-bold text-slate-200">
-                  اختر المنطقة أو افتح طريق جديد بالفلوس — وعند فتح جميع المناطق الـ ٥ يمكنك ربط الإسكندرية كلها في مدينة واحدة!
+                  اختر المنطقة أو افتح طريق جديد برصيد اللعبة — وعند فتح جميع المناطق الـ ٥ يمكنك ربط الإسكندرية كلها في مدينة واحدة!
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {ALEX_DISTRICTS.map((dist) => {
@@ -1495,7 +1492,6 @@ export default function App() {
             )}
         </main>
       )}
-      <OfflineIndicator hideDuringPlay={gameState === 'PLAYING'} />
     </div>
   );
 }
