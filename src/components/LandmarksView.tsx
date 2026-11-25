@@ -15,7 +15,7 @@ export const LandmarksView: React.FC<LandmarksViewProps> = ({ onStartPlay }) => 
             خريطة محطات الكورنيش
           </h1>
           <p className="text-slate-400 text-base max-w-2xl">
-            يمتد خط الكورنيش ثلاثي الأبعاد على ساحل الإسكندرية بطول ٣٥٠٠ متر بدايةً من بوابة وحدائق المندرة والمنتزه مروراً بسيدي بشر وكوبري ستانلي ومكتبة الإسكندرية ومحطة الرمل والمنشية وحتى قلعة قايتباي ببحري.
+            يمتد خط الكورنيش ثلاثي الأبعاد على ساحل الإسكندرية بطول ١٠,٠٠٠ متر (٢٦ منطقة بالترتيب الحقيقي) بدايةً من المنتزه (قصر المنتزه) والمندرة والعصافرة وميامي وسيدي بشر مروراً بسان ستيفانو وكوبري ستانلي وسيدي جابر والشاطبي ومحطة الرمل والمنشية وبحري والأنفوشي وحتى قلعة قايتباي (رأس التين).
           </p>
         </div>
 
@@ -38,7 +38,7 @@ export const LandmarksView: React.FC<LandmarksViewProps> = ({ onStartPlay }) => 
             <div className="space-y-1.5">
               <div className="flex items-center gap-3 text-xs text-slate-400 tabular-nums">
                 <span className="font-mono text-amber-400 font-semibold">
-                  0{index + 1}
+                  {String(index + 1).padStart(2, '0')}
                 </span>
                 <span aria-hidden="true">·</span>
                 <span>{lm.district}</span>

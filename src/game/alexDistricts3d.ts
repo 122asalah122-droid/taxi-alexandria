@@ -369,11 +369,11 @@ export function buildAlexDistrictEnvironment(
       emissiveIntensity: isNight ? 1.55 : 0.35,
     });
 
-    // Continuous Elevated Metro Viaduct running from Mandara (z = +50) all the way to Abu Qir El-Balad (z = -3560)!
+    // Continuous Elevated Metro Viaduct running from Mandara (z = +50) all the way to Abu Qir El-Balad (z = -7320)!
     // Viaduct rides cleanly above the center median (x = roadCenterX, y = 8.4m) so you drive right underneath & alongside it!
-    const segStep = 28;
+    const segStep = 32;
     const zStart = 50;
-    const zEnd = -3560;
+    const zEnd = -7320;
     const count = Math.ceil((zStart - zEnd) / segStep) + 1;
 
     const pierGeo = new THREE.BoxGeometry(1.55, 8.2, 1.85);
@@ -444,17 +444,51 @@ export function buildAlexDistrictEnvironment(
       group.add(inst);
     }
 
-    // Full Inland Urban Ground Plane (NO CORNICHE / NO SEA — bustling Alexandrian avenue on BOTH sides!)
+    // Inland Urban Ground Plane from Mandara to Abu Waad (z = +180 .. -5060), plus Left-Side Urban Ground from Abu Waad to Abu Qir El-Balad (so Right Side opens cleanly to Abu Qir Beaches & Blue Sea!)
     const aqGroundMat = new THREE.MeshBasicMaterial({
       color: 0x000000,
       fog: false,
     });
-    const aqGround = new THREE.Mesh(new THREE.PlaneGeometry(760, 4200), aqGroundMat);
-    aqGround.rotation.x = -Math.PI / 2;
-    aqGround.position.set(0, -0.09, -1760);
-    group.add(aqGround);
+    const aqGroundNorth = new THREE.Mesh(new THREE.PlaneGeometry(820, 5400), aqGroundMat);
+    aqGroundNorth.rotation.x = -Math.PI / 2;
+    aqGroundNorth.position.set(0, -0.09, -2480);
+    group.add(aqGroundNorth);
 
-    // Dense Right-Side Alexandrian Apartment & Shop Buildings (skipping clear footprints for all Abu Qir landmarks)
+    const aqGroundLeftSouth = new THREE.Mesh(new THREE.PlaneGeometry(460, 2700), aqGroundMat);
+    aqGroundLeftSouth.rotation.x = -Math.PI / 2;
+    aqGroundLeftSouth.position.set(-220, -0.09, -6360);
+    group.add(aqGroundLeftSouth);
+
+    // Pure-black right sidewalk with crisp white edge along main avenue from Mandara up to Abu Waad branch (z = +120 .. -5060)
+    const aqSidewalkCanvas = document.createElement('canvas');
+    aqSidewalkCanvas.width = 128;
+    aqSidewalkCanvas.height = 128;
+    const aqSwCtx = aqSidewalkCanvas.getContext('2d')!;
+    aqSwCtx.fillStyle = '#000000';
+    aqSwCtx.fillRect(0, 0, 128, 128);
+    aqSwCtx.fillStyle = '#FFFFFF';
+    aqSwCtx.fillRect(0, 0, 12, 128);
+    const aqSidewalkTex = new THREE.CanvasTexture(aqSidewalkCanvas);
+    aqSidewalkTex.colorSpace = THREE.SRGBColorSpace;
+    aqSidewalkTex.wrapS = THREE.RepeatWrapping;
+    aqSidewalkTex.wrapT = THREE.RepeatWrapping;
+    textures.push(aqSidewalkTex);
+    const aqSidewalkMat = new THREE.MeshBasicMaterial({ map: aqSidewalkTex, fog: false });
+    const aqRightWalkMainGeo = createCurvedRibbonGeometry(
+      10.0,
+      14.8,
+      120,
+      -5060,
+      5,
+      () => 0.24,
+      2,
+      0.22,
+      undefined,
+      'abu_qir',
+    );
+    group.add(new THREE.Mesh(aqRightWalkMainGeo, aqSidewalkMat));
+
+    // Dense Right-Side Alexandrian Apartment & Shop Buildings (Mandara .. before Abu Waad Beach Branch at z = -5020)
     const aqFacadeColors = [
       { base: '#E5CFAF', accent: '#9A6B42' },
       { base: '#DCD4C8', accent: '#64748B' },
@@ -473,21 +507,28 @@ export function buildAlexDistrictEnvironment(
       });
     });
 
-    const aqBldgStep = isMobile ? 30 : 23;
+    const aqBldgStep = isMobile ? 34 : 26;
     const aqBldgGeo = new THREE.BoxGeometry(1, 1, 1);
     const aqBldgBuckets: Array<THREE.Matrix4[]> = aqFacadeMats.map(() => []);
     const aqLandmarkClearRanges: Array<[number, number]> = [
-      [-585, -455], // المعمورة الشاطئ والملاهي
-      [-1185, -1055], // سوق المعمورة البلد
-      [-1785, -1655], // مجمع مدارس طوسون
-      [-2410, -2270], // الكلية البحرية بأبو قير
-      [-3575, -2775], // قلب أبو قير البلد (المدارس، المعهد الديني، البريد، بنك مصر، شركات الاتصال، الكافتيريات، الموقف، النوادي، سوق الأسماك)
+      [-970, -830], // بوابات وحدائق المنتزه
+      [-1875, -1725], // المعمورة الشاطئ والملاهي
+      [-2775, -2625], // سوق المعمورة البلد
+      [-3675, -3525], // منطقة ومحطة الإصلاح
+      [-4575, -4425], // مجمع مدارس طوسون
     ];
 
-    for (let z = 60; z >= -3560; z -= aqBldgStep) {
+    for (let z = 60; z >= -5000; z -= aqBldgStep) {
       if (aqLandmarkClearRanges.some(([minZ, maxZ]) => z >= minZ && z <= maxZ)) continue;
-      // Keep clear near right-side gas stations too
-      if (Math.abs(z + 1220) < 38 || Math.abs(z + 2580) < 38) continue;
+      // Keep clear near right-side gas stations
+      if (
+        Math.abs(z + 240) < 34 ||
+        Math.abs(z + 1360) < 34 ||
+        Math.abs(z + 2640) < 34 ||
+        Math.abs(z + 3920) < 34
+      ) {
+        continue;
+      }
       const rx = getRoadCenterX(z);
       const yaw = getRoadYawAt(z);
       const w = 13 + (Math.abs(z) % 5) * 1.5;
@@ -570,14 +611,17 @@ export function buildAlexDistrictEnvironment(
       return fg;
     };
 
-    // 6 Illuminated Elevated Metro Stations along المندرة ← المعمورة ← طوسون ← الكلية البحرية ← أبو قير البلد
+    // 9 Illuminated Elevated Metro Stations along المندرة ← المنتزه ← المعمورة ← الإصلاح ← طوسون ← يفطة أبو وعد والكلية البحرية ← أبو قير البلد (7.2 km)
     const stations = [
-      { z: -65, title: 'محطة المندرة العلوية', sub: 'بداية القطار المعلق العلوي ← أبو قير' },
-      { z: -500, title: 'محطة المعمورة الشاطئ', sub: 'ملاهي وبوابة المعمورة الشاطئ' },
-      { z: -1100, title: 'محطة المعمورة البلد', sub: 'سوق المعمورة البلد التجاري' },
-      { z: -1720, title: 'محطة طوسون العلوية', sub: 'مجمع مدارس طوسون' },
-      { z: -2340, title: 'محطة الكلية البحرية', sub: 'الكلية البحرية بأبو قير' },
-      { z: -3450, title: 'محطة أبو قير البلد', sub: 'أبو قير البلد · الموقف · النوادي · سوق الأسماك' },
+      { z: -65, title: '1. محطة المندرة العلوية', sub: 'بداية طريق أبو قير والقطار المعلق (٧.٢ كم)' },
+      { z: -900, title: '2. محطة المنتزه العلوية', sub: 'بوابات وحدائق المنتزه الملكية' },
+      { z: -1800, title: '3. محطة المعمورة الشاطئ', sub: 'ملاهي وعجلة المعمورة الدوارة' },
+      { z: -2700, title: '4. محطة المعمورة البلد', sub: 'سوق المعمورة البلد التجاري' },
+      { z: -3600, title: '5. محطة الإصلاح العلوية', sub: 'منطقة ومجمع الإصلاح · طريق أبو قير' },
+      { z: -4500, title: '6. محطة طوسون العلوية', sub: 'مجمع مدارس طوسون · استعد ليفطة أبو وعد' },
+      { z: -5400, title: '7. الكلية البحرية · أبو وعد', sub: 'الشارع الفرعي للشواطئ على اليمين ↗ · الكلية البحرية شمال' },
+      { z: -6300, title: '8. وسط أبو قير البلد', sub: 'المعهد الديني · البريد · بنك مصر · وبجانبك الشواطئ ↗' },
+      { z: -7150, title: '9. محطة أبو قير البلد النهائية', sub: 'الموقف · النوادي · سوق الأسماك وشاطئ الصيادين' },
     ];
     const canopyMat = new THREE.MeshStandardMaterial({
       color: 0x0f172a,
@@ -620,7 +664,46 @@ export function buildAlexDistrictEnvironment(
     });
 
     // ==========================================================================
-    // LANDMARK 1 (z = -520): المعمورة الشاطئ والملاهي (Spinning Ferris Wheel + Amusement Park)
+    // LANDMARK 0 (z = -900): بوابات وحدائق المنتزه (Royal Montaza Gates & Gardens)
+    // ==========================================================================
+    const montazaGateGroup = new THREE.Group();
+    const mzStoneMat = new THREE.MeshStandardMaterial({ color: 0xf5e6c8, roughness: 0.72 });
+    const mzTerracottaMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.55 });
+    const mzGardenMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.85 });
+    const mzFloor = new THREE.Mesh(new THREE.BoxGeometry(34, 0.35, 86), mzGardenMat);
+    mzFloor.position.set(20, 0.17, 0);
+    const mzWallL = new THREE.Mesh(new THREE.BoxGeometry(1.1, 4.2, 30), mzStoneMat);
+    mzWallL.position.set(4.2, 2.1, -26);
+    const mzWallR = mzWallL.clone();
+    mzWallR.position.z = 26;
+    const mzTowerL = new THREE.Mesh(new THREE.BoxGeometry(3.4, 11.5, 3.4), mzStoneMat);
+    mzTowerL.position.set(4.5, 5.75, -10.5);
+    const mzTowerR = mzTowerL.clone();
+    mzTowerR.position.z = 10.5;
+    const mzCapL = new THREE.Mesh(new THREE.ConeGeometry(2.6, 3.2, 4), mzTerracottaMat);
+    mzCapL.rotation.y = Math.PI / 4;
+    mzCapL.position.set(4.5, 13.0, -10.5);
+    const mzCapR = mzCapL.clone();
+    mzCapR.position.z = 10.5;
+    const mzSign = makeSignBoardMesh(
+      'بوابات وحدائق المنتزه',
+      'حدائق وقصر المنتزه الملكي · طريق أبو قير',
+      '#7C2D12',
+      '#FACC15',
+      '#FEF08A',
+      19.0,
+      3.1,
+      mzTerracottaMat,
+    );
+    mzSign.position.set(4.5, 8.8, 0);
+    mzSign.rotation.y = -Math.PI / 2;
+    montazaGateGroup.add(mzFloor, mzWallL, mzWallR, mzTowerL, mzTowerR, mzCapL, mzCapR, mzSign);
+    montazaGateGroup.position.set(getRoadCenterX(-900) + 16.5, getRoadHeightAt(-900), -900);
+    montazaGateGroup.rotation.y = getRoadYawAt(-900);
+    group.add(montazaGateGroup);
+
+    // ==========================================================================
+    // LANDMARK 1 (z = -1800): المعمورة الشاطئ والملاهي (Spinning Ferris Wheel + Amusement Park)
     // ==========================================================================
     const maamouraPark = new THREE.Group();
     const parkBaseMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.78 });
@@ -727,12 +810,12 @@ export function buildAlexDistrictEnvironment(
     carouselCore.position.set(20, 3.4, -24);
     maamouraPark.add(carouselBase, carouselRoof, carouselCore);
 
-    maamouraPark.position.set(getRoadCenterX(-520) + 16.5, getRoadHeightAt(-520), -520);
-    maamouraPark.rotation.y = getRoadYawAt(-520);
+    maamouraPark.position.set(getRoadCenterX(-1800) + 16.5, getRoadHeightAt(-1800), -1800);
+    maamouraPark.rotation.y = getRoadYawAt(-1800);
     group.add(maamouraPark);
 
     // ==========================================================================
-    // LANDMARK 2 (z = -1120): سوق المعمورة البلد (Bustling Traditional Market)
+    // LANDMARK 2 (z = -2700): سوق المعمورة البلد (Bustling Traditional Market)
     // ==========================================================================
     const maamouraMarket = new THREE.Group();
     const mktFloor = new THREE.Mesh(
@@ -793,12 +876,47 @@ export function buildAlexDistrictEnvironment(
       maamouraMarket.add(stall);
     }
 
-    maamouraMarket.position.set(getRoadCenterX(-1120) + 16.5, getRoadHeightAt(-1120), -1120);
-    maamouraMarket.rotation.y = getRoadYawAt(-1120);
+    maamouraMarket.position.set(getRoadCenterX(-2700) + 16.5, getRoadHeightAt(-2700), -2700);
+    maamouraMarket.rotation.y = getRoadYawAt(-2700);
     group.add(maamouraMarket);
 
     // ==========================================================================
-    // LANDMARK 3 (z = -1720): طوسون ومجمع المدارس (Egyptian Schools Complex)
+    // LANDMARK 2B (z = -3600): منطقة ومحطة الإصلاح (El-Eslah District Commercial Plaza)
+    // ==========================================================================
+    const eslahPlaza = new THREE.Group();
+    const eslahBase = new THREE.Mesh(
+      new THREE.BoxGeometry(30, 0.32, 84),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.85 }),
+    );
+    eslahBase.position.set(17, 0.16, 0);
+    const eslahMain = new THREE.Mesh(
+      new THREE.BoxGeometry(14, 14.5, 52),
+      aqFacadeMats[0],
+    );
+    eslahMain.position.set(22, 7.25, 0);
+    const eslahSign = makeSignBoardMesh(
+      'منطقة ومحطة الإصلاح',
+      'شارع ومحطة الإصلاح · بين المعمورة وطوسون',
+      '#1E3A8A',
+      '#FACC15',
+      '#FEF08A',
+      18.5,
+      3.0,
+      canopyMat,
+    );
+    eslahSign.position.set(5.2, 7.4, 0);
+    eslahSign.rotation.y = -Math.PI / 2;
+    const esPost1 = new THREE.Mesh(new THREE.BoxGeometry(0.65, 7.4, 0.65), canopyMat);
+    esPost1.position.set(5.2, 3.7, -9.2);
+    const esPost2 = esPost1.clone();
+    esPost2.position.z = 9.2;
+    eslahPlaza.add(eslahBase, eslahMain, eslahSign, esPost1, esPost2);
+    eslahPlaza.position.set(getRoadCenterX(-3600) + 16.5, getRoadHeightAt(-3600), -3600);
+    eslahPlaza.rotation.y = getRoadYawAt(-3600);
+    group.add(eslahPlaza);
+
+    // ==========================================================================
+    // LANDMARK 3 (z = -4500): طوسون ومجمع المدارس (Egyptian Schools Complex)
     // ==========================================================================
     const toussonSchools = new THREE.Group();
     const schoolWallMat = new THREE.MeshStandardMaterial({ color: 0xfde68a, roughness: 0.82 });
@@ -864,12 +982,12 @@ export function buildAlexDistrictEnvironment(
     scPost2.position.z = 8.8;
     toussonSchools.add(pitch, schoolFlag, schoolSign, scPost1, scPost2);
 
-    toussonSchools.position.set(getRoadCenterX(-1720) + 16.5, getRoadHeightAt(-1720), -1720);
-    toussonSchools.rotation.y = getRoadYawAt(-1720);
+    toussonSchools.position.set(getRoadCenterX(-4500) + 16.5, getRoadHeightAt(-4500), -4500);
+    toussonSchools.rotation.y = getRoadYawAt(-4500);
     group.add(toussonSchools);
 
     // ==========================================================================
-    // LANDMARK 4 (z = -2340): الكلية البحرية بأبو قير (Monumental Naval College)
+    // LANDMARK 4 (z = -5400, LEFT SIDE): الكلية البحرية بأبو قير (Opposite يفطة أبو وعد وشارع الشواطئ!)
     // ==========================================================================
     const navalCollege = new THREE.Group();
     const navalWhiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.55 });
@@ -948,17 +1066,245 @@ export function buildAlexDistrictEnvironment(
     flagR.position.set(11.5, 0.3, 16);
 
     navalCollege.add(nWallL, nWallR, gatePillarL, gatePillarR, navalSign, flagL, flagR);
-    navalCollege.position.set(getRoadCenterX(-2340) + 16.5, getRoadHeightAt(-2340), -2340);
-    navalCollege.rotation.y = getRoadYawAt(-2340);
+    navalCollege.position.set(getRoadCenterX(-5400) - 16.5, getRoadHeightAt(-5400), -5400);
+    navalCollege.rotation.y = getRoadYawAt(-5400) + Math.PI;
     group.add(navalCollege);
 
     // ==========================================================================
-    // HEART OF ABU QIR EL-BALAD (z = -2750 .. -3550)
-    // المدارس · المعهد الديني · البريد · بنك مصر · شركات الاتصال · الكافتيريات + ناس كثيرة · موقف العربيات · النوادي · سوق الأسماك
+    // ★ STAR FEATURE: يفطة أبو وعد + الشارع الفرعي للشواطئ (z = -5060 .. -7320, RIGHT +X SIDE!)
+    // Drivable parallel beach street branching right from يفطة أبو وعد with golden sand, vivid blue sea,
+    // 4 named Abu Qir beaches (شاطئ أبو وعد · شاطئ أبو قير · براديس والجزيرة · الصيادين), umbrellas & boats!
+    // ==========================================================================
+    const abuWaadGantry = buildOverheadGantry(
+      'يفطة أبو وعد ↗ · مدخل الشارع الفرعي للشواطئ',
+      'لف يمين للشارع الفرعي ← شاطئ أبو وعد · شاطئ أبو قير · براديس والجزيرة · الصيادين',
+      '#0C4A6E',
+      '#FACC15',
+      '#FEF08A',
+      maxAnisotropy,
+      isNight,
+      textures,
+    );
+    abuWaadGantry.scale.set(1.18, 1, 1);
+    abuWaadGantry.position.set(getRoadCenterX(-5060) + 2.8, getRoadHeightAt(-5060), -5060);
+    abuWaadGantry.rotation.y = getRoadYawAt(-5060);
+    group.add(abuWaadGantry);
+
+    // Monumental Glowing Roadside Signboard: "يفطة أبو وعد" right at the beach branch turn!
+    const abuWaadPostGroup = new THREE.Group();
+    const awPillar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, 10.2, 8), canopyMat);
+    awPillar1.position.set(0, 5.1, -6.2);
+    const awPillar2 = awPillar1.clone();
+    awPillar2.position.z = 6.2;
+    const awHeroSign = makeSignBoardMesh(
+      '★ يفطة أبو وعد · شارع الشواطئ ↗',
+      'الشارع الفرعي المفتوح على البحر وشواطئ أبو قير',
+      '#9A3412',
+      '#FACC15',
+      '#FEF08A',
+      14.5,
+      3.4,
+      canopyMat,
+    );
+    awHeroSign.position.set(0, 9.2, 0);
+    awHeroSign.rotation.y = -Math.PI / 2;
+    abuWaadPostGroup.add(awPillar1, awPillar2, awHeroSign);
+    abuWaadPostGroup.position.set(getRoadCenterX(-5075) + 19.2, 0, -5075);
+    abuWaadPostGroup.rotation.y = getRoadYawAt(-5075);
+    group.add(abuWaadPostGroup);
+
+    // Drivable Pure-Black Beach Branch Street (x = +9.65 .. +16.75, z = -5060 .. -7320) with crisp white lines
+    const beachRoadCanvas = document.createElement('canvas');
+    beachRoadCanvas.width = 256;
+    beachRoadCanvas.height = 512;
+    const brCtx = beachRoadCanvas.getContext('2d')!;
+    brCtx.fillStyle = '#000000';
+    brCtx.fillRect(0, 0, 256, 512);
+    brCtx.fillStyle = '#FFFFFF';
+    brCtx.fillRect(8, 0, 10, 512);
+    brCtx.fillRect(238, 0, 10, 512);
+    for (let y = 18; y < 512; y += 96) {
+      brCtx.fillRect(123, y, 10, 52);
+    }
+    const beachRoadTex = new THREE.CanvasTexture(beachRoadCanvas);
+    beachRoadTex.wrapS = THREE.RepeatWrapping;
+    beachRoadTex.wrapT = THREE.RepeatWrapping;
+    beachRoadTex.colorSpace = THREE.SRGBColorSpace;
+    beachRoadTex.anisotropy = maxAnisotropy;
+    textures.push(beachRoadTex);
+    const beachRoadMat = new THREE.MeshBasicMaterial({ map: beachRoadTex, fog: false });
+    const beachBranchRoadGeo = createCurvedRibbonGeometry(
+      9.65,
+      16.75,
+      -5060,
+      -7320,
+      5,
+      () => 0.015,
+      1,
+      0.06,
+      undefined,
+      'abu_qir',
+    );
+    group.add(new THREE.Mesh(beachBranchRoadGeo, beachRoadMat));
+
+    // Beachside Boardwalk Sidewalk (x = +16.85 .. +21.6, z = -5060 .. -7320)
+    const beachWalkGeo = createCurvedRibbonGeometry(
+      16.85,
+      21.6,
+      -5060,
+      -7320,
+      5,
+      () => 0.24,
+      2,
+      0.22,
+      undefined,
+      'abu_qir',
+    );
+    group.add(new THREE.Mesh(beachWalkGeo, aqSidewalkMat));
+
+    // Yellow reflective divider studs with wide open access ramps between main avenue & Beach Branch Street
+    const awStudMat = new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      emissive: 0xf59e0b,
+      emissiveIntensity: isNight ? 1.15 : 0.3,
+      roughness: 0.35,
+    });
+    const awStuds: Array<{ x: number; z: number; yaw: number }> = [];
+    for (let z = -5140; z >= -7260; z -= 14) {
+      if (Math.abs(z) % 140 < 54) continue;
+      awStuds.push({ x: getRoadCenterX(z) + 9.88, z, yaw: getRoadYawAt(z) });
+    }
+    if (awStuds.length > 0) {
+      const awStudInst = new THREE.InstancedMesh(new THREE.BoxGeometry(0.32, 0.14, 4.6), awStudMat, awStuds.length);
+      awStuds.forEach((sp, i) => {
+        dummy.position.set(sp.x, 0.08, sp.z);
+        dummy.rotation.set(0, sp.yaw, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        awStudInst.setMatrixAt(i, dummy.matrix);
+      });
+      awStudInst.instanceMatrix.needsUpdate = true;
+      awStudInst.frustumCulled = false;
+      group.add(awStudInst);
+    }
+
+    // Golden Sandy Beaches Ribbon (x = +21.6 .. +58) + Vivid Blue Abu Qir Sea Ribbon (x = +54 .. +480)
+    const aqBeachSandMat = new THREE.MeshStandardMaterial({
+      color: isNight ? 0x6b5b3e : isSunset ? 0xe5b874 : 0xf5d796,
+      roughness: 0.92,
+    });
+    const aqBeachSandGeo = createCurvedRibbonGeometry(
+      21.6,
+      58,
+      -5060,
+      -7380,
+      12,
+      (_z, isLeft) => (isLeft ? 0.1 : -0.45),
+      1,
+      0.02,
+      undefined,
+      'abu_qir',
+    );
+    group.add(new THREE.Mesh(aqBeachSandGeo, aqBeachSandMat));
+
+    const aqSeaMat = new THREE.MeshStandardMaterial({
+      color: isNight ? 0x0b357a : isSunset ? 0x144ea8 : 0x1565d8,
+      roughness: 0.15,
+      metalness: 0.28,
+      emissive: isNight ? 0x09245e : isSunset ? 0x143b8c : 0x1d4ed8,
+      emissiveIntensity: isNight ? 0.42 : 0.24,
+    });
+    const aqSeaGeo = createCurvedRibbonGeometry(
+      54,
+      480,
+      -5060,
+      -7480,
+      18,
+      () => -0.58,
+      1,
+      0.01,
+      undefined,
+      'abu_qir',
+    );
+    group.add(new THREE.Mesh(aqSeaGeo, aqSeaMat));
+
+    // 4 Named 3D Abu Qir Beaches along the Abu Waad Side Branch Street (arches, umbrellas, cabanas!)
+    const aqBeachDefs = [
+      { z: -5320, title: 'شاطئ أبو وعد', sub: 'بداية شارع الشواطئ · كافيهات وشماسي على البحر', bg: '#0369A1' },
+      { z: -5860, title: 'شاطئ أبو قير السياحي', sub: 'شاطئ رملي مفتوح · كبائن وملاعب شاطئية', bg: '#0E7490' },
+      { z: -6400, title: 'شاطئ براديس والجزيرة', sub: 'إطلالة خليج أبو قير · مراكب ورحلات بحرية', bg: '#1D4ED8' },
+      { z: -6960, title: 'شاطئ الصيادين وميناء أبو قير', sub: 'مراكب الصيد وكورنيش أبو قير الشرقي', bg: '#0F766E' },
+    ];
+    const beachUmbPalette = [0xef4444, 0x0ea5e9, 0xf59e0b, 0x10b981, 0xec4899, 0x8b5cf6];
+    const beachPoleMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.45 });
+    const cabanaWoodMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.72 });
+
+    aqBeachDefs.forEach((bd, bIdx) => {
+      const bg = new THREE.Group();
+      const bSign = makeSignBoardMesh(bd.title, bd.sub, bd.bg, '#FACC15', '#FEF08A', 15.5, 2.9, canopyMat);
+      bSign.position.set(20.6, 6.2, 0);
+      bSign.rotation.y = -Math.PI / 2;
+      const bp1 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 6.2, 0.55), beachPoleMat);
+      bp1.position.set(20.6, 3.1, -7.8);
+      const bp2 = bp1.clone();
+      bp2.position.z = 7.8;
+      bg.add(bSign, bp1, bp2);
+
+      // Beach Cabanas & Rows of Colorful Beach Umbrellas on the Golden Sand!
+      for (let row = 0; row < 2; row++) {
+        for (let u = -4; u <= 4; u++) {
+          const ux = 28 + row * 12 + (Math.abs(u) % 2) * 2.2;
+          const uz = u * 16 + row * 7;
+          const uPole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.2, 6), beachPoleMat);
+          uPole.position.set(ux, 1.5, uz);
+          const uCone = new THREE.Mesh(
+            new THREE.ConeGeometry(2.6, 1.0, 8),
+            new THREE.MeshStandardMaterial({
+              color: beachUmbPalette[(Math.abs(u) + bIdx + row) % beachUmbPalette.length],
+              roughness: 0.55,
+            }),
+          );
+          uCone.position.set(ux, 3.1, uz);
+          bg.add(uPole, uCone);
+        }
+      }
+      for (const cz of [-28, 0, 28]) {
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(4.6, 3.6, 6.4), cabanaWoodMat);
+        cab.position.set(25.2, 1.8, cz);
+        const cabRoof = new THREE.Mesh(
+          new THREE.BoxGeometry(5.2, 0.45, 7.0),
+          new THREE.MeshStandardMaterial({ color: beachUmbPalette[(bIdx + Math.abs(cz)) % beachUmbPalette.length], roughness: 0.5 }),
+        );
+        cabRoof.position.set(25.2, 3.8, cz);
+        bg.add(cab, cabRoof);
+      }
+
+      bg.position.set(getRoadCenterX(bd.z), 0, bd.z);
+      bg.rotation.y = getRoadYawAt(bd.z);
+      group.add(bg);
+    });
+
+    // 10 Colorful Fishing & Pleasure Boats bobbing gently on the vivid blue Abu Qir sea off the Beach Branch!
+    const aqBoatEntries: Array<{ mesh: THREE.Group; baseY: number; phase: number }> = [];
+    const aqBoatHulls = [0x0284c7, 0xe11d48, 0x16a34a, 0xd97706, 0x7c3aed, 0x0ea5e9];
+    for (let b = 0; b < 10; b++) {
+      const bz = -5180 - b * 215;
+      const bx = getRoadCenterX(bz) + 74 + (b % 3) * 26;
+      const boat = buildFishingBoat(aqBoatHulls[b % aqBoatHulls.length], 0xfacc15);
+      boat.position.set(bx, -0.42, bz);
+      boat.rotation.y = (b % 2 === 0 ? 0.35 : -0.45) + (b * 0.17);
+      boat.scale.setScalar(1.18 + (b % 3) * 0.14);
+      group.add(boat);
+      aqBoatEntries.push({ mesh: boat, baseY: -0.42, phase: b * 0.9 });
+    }
+
+    // ==========================================================================
+    // HEART OF ABU QIR EL-BALAD (z = -5760 .. -7200, LEFT -X SIDE opposite Abu Qir Beaches!)
+    // المدارس · المعهد الديني · البريد · بنك مصر · شركات الاتصال · الكافتيريات · موقف العربيات · النوادي · سوق الأسماك
     // ==========================================================================
     const baladGantry = buildOverheadGantry(
       'أهلاً بكم في قلب أبو قير البلد',
-      'المعهد الديني · البريد · بنك مصر · شركات الاتصال · الكافتيريات · موقف العربيات · النوادي · سوق الأسماك',
+      'المعهد الديني · البريد · بنك مصر · الكافتيريات · الموقف · النوادي · سوق الأسماك — والشواطئ على اليمين ↗',
       '#0F172A',
       '#FACC15',
       '#FEF08A',
@@ -966,8 +1312,9 @@ export function buildAlexDistrictEnvironment(
       isNight,
       textures,
     );
-    baladGantry.position.set(getRoadCenterX(-2750), getRoadHeightAt(-2750), -2750);
-    baladGantry.rotation.y = getRoadYawAt(-2750);
+    baladGantry.scale.set(1.18, 1, 1);
+    baladGantry.position.set(getRoadCenterX(-5760) + 2.8, getRoadHeightAt(-5760), -5760);
+    baladGantry.rotation.y = getRoadYawAt(-5760);
     group.add(baladGantry);
 
     // 5A (z = -2845): مدارس أبو قير والمعهد الديني الأزهري
@@ -1002,8 +1349,8 @@ export function buildAlexDistrictEnvironment(
     azharSign.position.set(8.6, 11.4, 4);
     azharSign.rotation.y = -Math.PI / 2;
     azharZone.add(azharBldg, azharDome, azharFinial, aqSchoolBldg, aqSchoolFlag, azharSign);
-    azharZone.position.set(getRoadCenterX(-2845) + 16.5, getRoadHeightAt(-2845), -2845);
-    azharZone.rotation.y = getRoadYawAt(-2845);
+    azharZone.position.set(getRoadCenterX(-5940) - 16.5, getRoadHeightAt(-5940), -5940);
+    azharZone.rotation.y = getRoadYawAt(-5940) + Math.PI;
     group.add(azharZone);
 
     // 5B (z = -2985): مكتب بريد أبو قير + بنك مصر فرع أبو قير
@@ -1059,8 +1406,8 @@ export function buildAlexDistrictEnvironment(
     bankSign.rotation.y = -Math.PI / 2;
 
     civicZone.add(postBldg, postBand, postBox, postSign, bankBldg, bankBand, bankGlass, bankSign);
-    civicZone.position.set(getRoadCenterX(-2985) + 16.5, getRoadHeightAt(-2985), -2985);
-    civicZone.rotation.y = getRoadYawAt(-2985);
+    civicZone.position.set(getRoadCenterX(-6160) - 16.5, getRoadHeightAt(-6160), -6160);
+    civicZone.rotation.y = getRoadYawAt(-6160) + Math.PI;
     group.add(civicZone);
 
     // 5C (z = -3105): مجمع شركات الاتصالات والإنترنت (4 vibrant modern telecom storefronts)
@@ -1108,8 +1455,8 @@ export function buildAlexDistrictEnvironment(
     telecomSign.position.set(9.1, 10.6, 0);
     telecomSign.rotation.y = -Math.PI / 2;
     telecomZone.add(telecomSign);
-    telecomZone.position.set(getRoadCenterX(-3105) + 16.5, getRoadHeightAt(-3105), -3105);
-    telecomZone.rotation.y = getRoadYawAt(-3105);
+    telecomZone.position.set(getRoadCenterX(-6360) - 16.5, getRoadHeightAt(-6360), -6360);
+    telecomZone.rotation.y = getRoadYawAt(-6360) + Math.PI;
     group.add(telecomZone);
 
     // 5D (z = -3220): كافتيريات ومقاهي أبو قير البلد (Warm lit outdoor umbrellas, tables & cafés)
@@ -1157,8 +1504,8 @@ export function buildAlexDistrictEnvironment(
     cafeSign.position.set(11.1, 9.6, 0);
     cafeSign.rotation.y = -Math.PI / 2;
     cafesZone.add(cafeSign);
-    cafesZone.position.set(getRoadCenterX(-3220) + 16.5, getRoadHeightAt(-3220), -3220);
-    cafesZone.rotation.y = getRoadYawAt(-3220);
+    cafesZone.position.set(getRoadCenterX(-6560) - 16.5, getRoadHeightAt(-6560), -6560);
+    cafesZone.rotation.y = getRoadYawAt(-6560) + Math.PI;
     group.add(cafesZone);
 
     // 5E (z = -3335): موقف عربيات أبو قير (Shaded Transit Bay + Parked 3D Microbuses & Taxis)
@@ -1235,8 +1582,8 @@ export function buildAlexDistrictEnvironment(
     transitSign.position.set(4.8, 7.6, 0);
     transitSign.rotation.y = -Math.PI / 2;
     transitStation.add(transitSign);
-    transitStation.position.set(getRoadCenterX(-3335) + 16.5, getRoadHeightAt(-3335), -3335);
-    transitStation.rotation.y = getRoadYawAt(-3335);
+    transitStation.position.set(getRoadCenterX(-6780) - 16.5, getRoadHeightAt(-6780), -6780);
+    transitStation.rotation.y = getRoadYawAt(-6780) + Math.PI;
     group.add(transitStation);
 
     // 5F (z = -3430): نوادي أبو قير الرياضية والاجتماعية (Sports Clubs + Floodlit Pitch)
@@ -1284,8 +1631,8 @@ export function buildAlexDistrictEnvironment(
     const clPost2 = clPost1.clone();
     clPost2.position.z = 9.5;
     clubsZone.add(clubSign, clPost1, clPost2);
-    clubsZone.position.set(getRoadCenterX(-3430) + 16.5, getRoadHeightAt(-3430), -3430);
-    clubsZone.rotation.y = getRoadYawAt(-3430);
+    clubsZone.position.set(getRoadCenterX(-6980) - 16.5, getRoadHeightAt(-6980), -6980);
+    clubsZone.rotation.y = getRoadYawAt(-6980) + Math.PI;
     group.add(clubsZone);
 
     // 5G (z = -3525): سوق الأسماك بأبو قير البلد (Grand Inland Covered Fish Market Hall)
@@ -1337,8 +1684,8 @@ export function buildAlexDistrictEnvironment(
     fishSign.position.set(6.0, 9.2, 0);
     fishSign.rotation.y = -Math.PI / 2;
     fishMarket.add(fishSign);
-    fishMarket.position.set(getRoadCenterX(-3525) + 16.5, getRoadHeightAt(-3525), -3525);
-    fishMarket.rotation.y = getRoadYawAt(-3525);
+    fishMarket.position.set(getRoadCenterX(-7160) - 16.5, getRoadHeightAt(-7160), -7160);
+    fishMarket.rotation.y = getRoadYawAt(-7160) + Math.PI;
     group.add(fishMarket);
 
     // ==========================================================================
@@ -1367,15 +1714,20 @@ export function buildAlexDistrictEnvironment(
     const tmpColor = new THREE.Color();
 
     for (let i = 0; i < crowdCount; i++) {
-      // 75% concentrated in bustling Abu Qir El-Balad (cafés, bank, post, transit, fish market), 25% at Maamoura Market & Park
+      // Spread lively crowds along Abu Waad Beaches boardwalk, Abu Qir El-Balad, Maamoura Market & Park
       const z =
-        i < crowdCount * 0.75
-          ? -2780 - (i / (crowdCount * 0.75)) * 755
+        i < crowdCount * 0.72
+          ? -5140 - (i / (crowdCount * 0.72)) * 2040
           : i % 2 === 0
-            ? -1075 - ((i * 19) % 90)
-            : -485 - ((i * 17) % 75);
-      const onRight = i % 3 !== 0;
-      const sideOffset = onRight ? 13.8 + (i % 4) * 1.45 : -13.6 - (i % 3) * 1.35;
+            ? -2655 - ((i * 19) % 90)
+            : -1755 - ((i * 17) % 75);
+      const onRight = i % 2 === 0;
+      const sideOffset =
+        z <= -5060 && onRight
+          ? 18.2 + (i % 3) * 1.15
+          : onRight
+            ? 12.6 + (i % 3) * 0.9
+            : -13.6 - (i % 3) * 1.35;
       const x = getRoadCenterX(z) + sideOffset;
       const baseY = getRoadHeightAt(z) + 0.26;
       crowdData.push({ x, z, baseY, phase: i * 0.9, speed: 2.2 + (i % 4) * 0.55 });
@@ -1404,18 +1756,18 @@ export function buildAlexDistrictEnvironment(
     }
     if (torsoInst.instanceColor) torsoInst.instanceColor.needsUpdate = true;
 
-    // 2 LIVE ANIMATED ELEVATED TRAINS gliding smoothly along the viaduct overhead!
+    // 2 LIVE ANIMATED ELEVATED TRAINS gliding smoothly along the 7.2 km viaduct overhead!
     const trainForward = buildElevatedTrain(maxAnisotropy, isNight, textures);
     const trainReverse = buildElevatedTrain(maxAnisotropy, isNight, textures);
     group.add(trainForward, trainReverse);
 
     let train1Z = -180;
-    let train2Z = -1950;
+    let train2Z = -3850;
 
     updaters.push((dt, elapsed) => {
       // Train 1 glides Mandara -> Abu Qir (track +1.85m right of viaduct centerline)
-      train1Z -= dt * 36;
-      if (train1Z < -3540) train1Z = 20;
+      train1Z -= dt * 42;
+      if (train1Z < -7260) train1Z = 20;
       const yaw1 = getRoadYawAt(train1Z);
       trainForward.position.set(
         getRoadCenterX(train1Z) - 0.1 + Math.cos(yaw1) * 1.9,
@@ -1425,8 +1777,8 @@ export function buildAlexDistrictEnvironment(
       trainForward.rotation.y = yaw1;
 
       // Train 2 glides Abu Qir -> Mandara (track -1.85m left of viaduct centerline)
-      train2Z += dt * 38;
-      if (train2Z > 20) train2Z = -3540;
+      train2Z += dt * 44;
+      if (train2Z > 20) train2Z = -7260;
       const yaw2 = getRoadYawAt(train2Z);
       trainReverse.position.set(
         getRoadCenterX(train2Z) - 0.1 - Math.cos(yaw2) * 1.9,
@@ -1442,7 +1794,14 @@ export function buildAlexDistrictEnvironment(
         ferrisGondolas[i].rotation.x = -wheelAngle;
       }
 
-      // Subtle lively bobbing of Abu Qir El-Balad pedestrian crowds
+      // Gently bob fishing boats off Abu Qir beaches
+      for (let i = 0; i < aqBoatEntries.length; i++) {
+        const b = aqBoatEntries[i];
+        b.mesh.position.y = b.baseY + Math.sin(elapsed * 1.5 + b.phase) * 0.16;
+        b.mesh.rotation.z = Math.sin(elapsed * 1.2 + b.phase) * 0.04;
+      }
+
+      // Subtle lively bobbing of Abu Qir El-Balad & Beaches pedestrian crowds
       for (let i = 0; i < crowdData.length; i++) {
         const p = crowdData[i];
         const bob = Math.abs(Math.sin(elapsed * p.speed + p.phase)) * 0.12;
@@ -1464,17 +1823,17 @@ export function buildAlexDistrictEnvironment(
   // 2) RAS EL-SODA -> EL-SAA'A -> EL-SEYOUF -> VICTORIA (طريق الرأس السوداء ← فيكتوريا)
   // ============================================================================
   else if (districtId === 'ras_el_soda_victoria') {
-    // Full Inland Urban Ground Plane (NO SEA — bustling Alexandrian city on BOTH sides!)
+    // Full Inland Urban Ground Plane across 7.2km (NO SEA — bustling Alexandrian city on BOTH sides!)
     const urbanGroundMat = new THREE.MeshBasicMaterial({
       color: 0x000000,
       fog: false,
     });
-    const urbanGround = new THREE.Mesh(new THREE.PlaneGeometry(760, 4200), urbanGroundMat);
+    const urbanGround = new THREE.Mesh(new THREE.PlaneGeometry(780, 8200), urbanGroundMat);
     urbanGround.rotation.x = -Math.PI / 2;
-    urbanGround.position.set(0, -0.09, -1760);
+    urbanGround.position.set(0, -0.09, -3660);
     group.add(urbanGround);
 
-    // Dense Right-Side Alexandrian Buildings + Shops mirroring the city boulevard on the +X side!
+    // Dense Right-Side Alexandrian Buildings + Shops mirroring the city boulevard on the +X side across 7.2km!
     const facadeColors = [
       { base: '#E2C9A8', accent: '#9A6B42' },
       { base: '#D8CFC2', accent: '#64748B' },
@@ -1493,14 +1852,21 @@ export function buildAlexDistrictEnvironment(
       });
     });
 
-    const bldgStep = isMobile ? 32 : 24;
+    const bldgStep = isMobile ? 36 : 26;
     const bldgGeo = new THREE.BoxGeometry(1, 1, 1);
     const dummy = new THREE.Object3D();
     const buckets: Array<THREE.Matrix4[]> = facadeMats.map(() => []);
 
-    for (let z = 60; z >= -3560; z -= bldgStep) {
-      // Keep clear around right-side gas stations and major landmarks
-      if (Math.abs(z + 1220) < 42 || Math.abs(z + 3440) < 48) continue;
+    for (let z = 60; z >= -7360; z -= bldgStep) {
+      // Keep clear around right-side landmarks (Halls -2400, Awaied -3200, Clock Tower -4000, Victoria -7200)
+      if (
+        Math.abs(z + 2400) < 38 ||
+        Math.abs(z + 3200) < 34 ||
+        Math.abs(z + 4000) < 42 ||
+        Math.abs(z + 7200) < 48
+      ) {
+        continue;
+      }
       const rx = getRoadCenterX(z);
       const yaw = getRoadYawAt(z);
       const w = 13 + (Math.abs(z) % 5) * 1.6;
@@ -1523,23 +1889,26 @@ export function buildAlexDistrictEnvironment(
       group.add(inst);
     });
 
-    // Gate 1: Ras El-Soda Start Arch
-    const rasSodaGate = buildOverheadGantry(
-      'طريق الرأس السوداء ← فيكتوريا',
-      'شارع مصطفى كامل · ميدان الساعة · السيوف',
-      '#1E293B',
-      '#FACC15',
-      '#FEF08A',
-      maxAnisotropy,
-      isNight,
-      textures,
-    );
-    rasSodaGate.position.set(getRoadCenterX(-55), getRoadHeightAt(-55), -55);
-    rasSodaGate.rotation.y = getRoadYawAt(-55);
-    group.add(rasSodaGate);
+    // All 10 Ordered Overhead Highway Gantries (الرأس السوداء -> الفلكي -> السيوف -> مصطفى كامل -> العوايد -> الساعة -> باكوس -> غبريال -> كلية فيكتوريا -> فيكتوريا)
+    const rvGantries: [string, string, number, string, string, string][] = [
+      ['1. الرأس السوداء', 'بداية شارع مصطفى كامل ← فيكتوريا (٧.٢ كم)', -45, '#1E293B', '#FACC15', '#FEF08A'],
+      ['2. الفلكي', 'مدخل شارع ١٦ الملك · ٨٠٠ م', -750, '#0F172A', '#38BDF8', '#FFFFFF'],
+      ['3. السيوف (السيوف شماعة)', 'دوران والسيوف التجاري · ١٦٠٠ م', -1550, '#1E1B4B', '#38BDF8', '#FFFFFF'],
+      ['4. شارع مصطفى كامل', 'مجمع القاعات والمعرض · ٢٤٠٠ م', -2350, '#0C4A6E', '#FACC15', '#FFFFFF'],
+      ['5. العوايد (كوبري العوايد)', 'مطلع كوبري العوايد العلوي · ٣٢٠٠ م', -3140, '#1E293B', '#F59E0B', '#FEF08A'],
+      ['6. ميدان وبرج الساعة', 'قلب ميدان الساعة · ٤٠٠٠ م', -3940, '#0F172A', '#F59E0B', '#FDE047'],
+      ['7. باكوس', 'تقاطع وسوق باكوس الشعبي · ٤٨٠٠ م', -4750, '#064E3B', '#FACC15', '#FFFFFF'],
+      ['8. غبريال', 'شارع مصطفى كامل · ٥٦٠٠ م', -5550, '#1E293B', '#38BDF8', '#FFFFFF'],
+      ['9. كلية فيكتوريا', 'شارع الجلاء · ٦٤٠٠ م', -6350, '#0F172A', '#FACC15', '#FEF08A'],
+      ['10. ميدان ومحطة ترام فيكتوريا', 'خط النهاية · ٧٢٠٠ م', -7120, '#0C4A6E', '#FACC15', '#FEF08A'],
+    ];
+    for (const [title, sub, gz, bg, border, accent] of rvGantries) {
+      const gate = buildOverheadGantry(title, sub, bg, border, accent, maxAnisotropy, isNight, textures);
+      gate.position.set(getRoadCenterX(gz), getRoadHeightAt(gz), gz);
+      gate.rotation.y = getRoadYawAt(gz);
+      group.add(gate);
+    }
 
-    // Iconic Landmark: Midan El-Saa'a 3D Clock Tower (برج ميدان الساعة) at z = -1220!
-    const clockTower = new THREE.Group();
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0xe5d5bd, roughness: 0.76 });
     const trimGoldMat = new THREE.MeshStandardMaterial({
       color: 0xf59e0b,
@@ -1548,6 +1917,45 @@ export function buildAlexDistrictEnvironment(
       metalness: 0.6,
       roughness: 0.3,
     });
+    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.8 });
+
+    // 4. شارع مصطفى كامل · مجمع القاعات والمعرض (Right +X at z = -2400)
+    {
+      const cz = -2400;
+      const halls = new THREE.Group();
+      const hallBody = new THREE.Mesh(new THREE.BoxGeometry(20, 12, 34), stoneMat);
+      hallBody.position.y = 6;
+      const goldRoof = new THREE.Mesh(new THREE.BoxGeometry(21, 1.3, 35), trimGoldMat);
+      goldRoof.position.y = 12.6;
+      const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        emissive: isNight ? 0x0284c7 : 0x000000,
+        emissiveIntensity: isNight ? 0.9 : 0,
+        roughness: 0.2,
+      });
+      const glassFront = new THREE.Mesh(new THREE.BoxGeometry(0.4, 7.5, 24), glassMat);
+      glassFront.position.set(-10.1, 5.2, 0);
+      halls.add(hallBody, goldRoof, glassFront);
+      halls.position.set(getRoadCenterX(cz) + 30, 0, cz);
+      halls.rotation.y = getRoadYawAt(cz);
+      group.add(halls);
+    }
+
+    // 5. كوبري العوايد العلوي (El-Awaied Flyover spanning across the boulevard at z = -3200)
+    const awaiedBridge = new THREE.Group();
+    const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(36, 1.8, 12), concreteMat);
+    bridgeDeck.position.y = 7.6;
+    const bridgePillarL = new THREE.Mesh(new THREE.BoxGeometry(2.2, 7.6, 8), concreteMat);
+    bridgePillarL.position.set(-15.5, 3.8, 0);
+    const bridgePillarR = bridgePillarL.clone();
+    bridgePillarR.position.x = 15.5;
+    awaiedBridge.add(bridgeDeck, bridgePillarL, bridgePillarR);
+    awaiedBridge.position.set(getRoadCenterX(-3200), getRoadHeightAt(-3200), -3200);
+    awaiedBridge.rotation.y = getRoadYawAt(-3200);
+    group.add(awaiedBridge);
+
+    // 6. Iconic Landmark: Midan El-Saa'a 3D Clock Tower (برج ميدان الساعة) at z = -4000!
+    const clockTower = new THREE.Group();
     const basePedestal = new THREE.Mesh(new THREE.CylinderGeometry(5.8, 6.8, 3.2, 12), stoneMat);
     basePedestal.position.y = 1.6;
     const shaft = new THREE.Mesh(new THREE.BoxGeometry(4.4, 14.5, 4.4), stoneMat);
@@ -1580,67 +1988,47 @@ export function buildAlexDistrictEnvironment(
       clockTower.add(dial);
     }
     clockTower.add(basePedestal, shaft, crown, spire);
-    clockTower.position.set(getRoadCenterX(-1220) + 21, 0, -1220);
+    clockTower.position.set(getRoadCenterX(-4000) + 21, 0, -4000);
     group.add(clockTower);
 
-    const saaGate = buildOverheadGantry(
-      'ميدان وبرج الساعة',
-      'الرأس السوداء ⇄ السيوف ⇄ فيكتوريا',
-      '#0F172A',
-      '#F59E0B',
-      '#FDE047',
-      maxAnisotropy,
-      isNight,
-      textures,
-    );
-    saaGate.position.set(getRoadCenterX(-1190), getRoadHeightAt(-1190), -1190);
-    saaGate.rotation.y = getRoadYawAt(-1190);
-    group.add(saaGate);
+    // 7. سوق باكوس الشعبي (Colorful Market Arcade on LEFT -X at z = -4800)
+    {
+      const cz = -4800;
+      const bakos = new THREE.Group();
+      const bBody = new THREE.Mesh(new THREE.BoxGeometry(16, 9.5, 32), stoneMat);
+      bBody.position.y = 4.75;
+      bakos.add(bBody);
+      const awnCols = [0xdc2626, 0x059669, 0xf59e0b, 0x0284c7];
+      for (let i = 0; i < 4; i++) {
+        const awn = new THREE.Mesh(
+          new THREE.BoxGeometry(3.4, 0.55, 6.8),
+          new THREE.MeshStandardMaterial({ color: awnCols[i], roughness: 0.55 }),
+        );
+        awn.position.set(9.2, 3.6, -11.5 + i * 7.6);
+        bakos.add(awn);
+      }
+      bakos.position.set(getRoadCenterX(cz) - 28, 0, cz);
+      bakos.rotation.y = getRoadYawAt(cz);
+      group.add(bakos);
+    }
 
-    // El-Seyouf Shama'a Commercial Overpass at z = -1960 & El-Awaied Flyover at z = -2680
-    const seyoufGate = buildOverheadGantry(
-      'شارع وميدان السيوف شماعة',
-      'المتاجر والمطاعم · طريق فيكتوريا',
-      '#1E1B4B',
-      '#38BDF8',
-      '#FFFFFF',
-      maxAnisotropy,
-      isNight,
-      textures,
-    );
-    seyoufGate.position.set(getRoadCenterX(-1960), getRoadHeightAt(-1960), -1960);
-    seyoufGate.rotation.y = getRoadYawAt(-1960);
-    group.add(seyoufGate);
+    // 9. كلية فيكتوريا التاريخية (Classic Heritage Stone Campus on LEFT -X at z = -6400)
+    {
+      const cz = -6400;
+      const college = new THREE.Group();
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(20, 12.5, 38), stoneMat);
+      wing.position.y = 6.25;
+      const tower = new THREE.Mesh(new THREE.BoxGeometry(7.5, 19, 7.5), stoneMat);
+      tower.position.set(5, 9.5, 0);
+      const domeCap = new THREE.Mesh(new THREE.ConeGeometry(4.4, 4.8, 8), trimGoldMat);
+      domeCap.position.set(5, 21.4, 0);
+      college.add(wing, tower, domeCap);
+      college.position.set(getRoadCenterX(cz) - 29, 0, cz);
+      college.rotation.y = getRoadYawAt(cz);
+      group.add(college);
+    }
 
-    const awaiedBridge = new THREE.Group();
-    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.8 });
-    const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(36, 1.8, 12), concreteMat);
-    bridgeDeck.position.y = 7.6;
-    const bridgePillarL = new THREE.Mesh(new THREE.BoxGeometry(2.2, 7.6, 8), concreteMat);
-    bridgePillarL.position.set(-15.5, 3.8, 0);
-    const bridgePillarR = bridgePillarL.clone();
-    bridgePillarR.position.x = 15.5;
-    awaiedBridge.add(bridgeDeck, bridgePillarL, bridgePillarR);
-    awaiedBridge.position.set(getRoadCenterX(-2680), getRoadHeightAt(-2680), -2680);
-    awaiedBridge.rotation.y = getRoadYawAt(-2680);
-    group.add(awaiedBridge);
-
-    // Victoria Plaza Gate + Classic Blue & Yellow Alexandria Tramcar (ترام فيكتوريا)!
-    const victoriaGate = buildOverheadGantry(
-      'ميدان ومحطة ترام فيكتوريا',
-      'كلية فيكتوريا · نهاية طريق الرأس السوداء',
-      '#0C4A6E',
-      '#FACC15',
-      '#FEF08A',
-      maxAnisotropy,
-      isNight,
-      textures,
-    );
-    victoriaGate.position.set(getRoadCenterX(-3400), getRoadHeightAt(-3400), -3400);
-    victoriaGate.rotation.y = getRoadYawAt(-3400);
-    group.add(victoriaGate);
-
-    // Animated Classic Alexandria Blue & Yellow Tramcar cruising along the right tramway corridor!
+    // 10. Animated Classic Alexandria Blue & Yellow Tramcar cruising along the entire 7.2km right tramway corridor!
     const tram = new THREE.Group();
     const tramBlueMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.35, metalness: 0.25 });
     const tramYellowMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.32 });
@@ -1665,10 +2053,10 @@ export function buildAlexDistrictEnvironment(
     }
     group.add(tram);
 
-    let tramZ = -3480;
+    let tramZ = -7200;
     updaters.push((dt) => {
-      tramZ += dt * 16;
-      if (tramZ > -100) tramZ = -3480;
+      tramZ += dt * 18;
+      if (tramZ > -100) tramZ = -7200;
       const yaw = getRoadYawAt(tramZ);
       tram.position.set(getRoadCenterX(tramZ) + 15.6, getRoadHeightAt(tramZ), tramZ);
       tram.rotation.y = yaw + Math.PI;
@@ -1676,11 +2064,14 @@ export function buildAlexDistrictEnvironment(
   }
 
   // ============================================================================
-  // 3) ANFOUSHI MARITIME CITY (مدينة الأنفوشي · حلقة السمك · زينة بحري · قصر رأس التين)
+  // 3) ANFOUSHI MARITIME CITY (ساحل رأس التين والأنفوشي وبحري · ٧.٢ كم · ٩ مناطق بالترتيب)
+  // 1. قصر رأس التين -> 2. مستشفى رأس التين -> 3. شاطئ رأس التين -> 4. شاطئ الأنفوشي ->
+  // 5. قلعة قايتباي -> 6. لسان القلعة (نادي اليخت والكشافة) -> 7. ميدان المساجد ->
+  // 8. السيالة (بحري) -> 9. حلقة السمك وميناء الصيادين (بحري)
   // ============================================================================
   else if (districtId === 'anfoushi') {
-    // Festive Overhead Glowing Lantern Garlands ("زينة بحري والأنفوشي") arching across the historic avenue!
-    const garlandStep = isMobile ? 75 : 55;
+    // Festive Overhead Glowing Lantern Garlands ("زينة بحري والأنفوشي") arching across the 7.2km coastal avenue!
+    const garlandStep = isMobile ? 115 : 80;
     const wireMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
     const bulbColors = [0xfacc15, 0x38bdf8, 0xfb7185, 0x34d399];
     const bulbMats = bulbColors.map(
@@ -1694,9 +2085,10 @@ export function buildAlexDistrictEnvironment(
     );
 
     const garlandPoleGeo = new THREE.CylinderGeometry(0.14, 0.18, 7.6, 6);
+    const garlandCableGeo = new THREE.BoxGeometry(27.6, 0.08, 0.08);
     const bulbGeo = new THREE.SphereGeometry(0.24, 6, 6);
 
-    for (let z = -30; z >= -3480; z -= garlandStep) {
+    for (let z = -30; z >= -7220; z -= garlandStep) {
       const rx = getRoadCenterX(z);
       const ry = getRoadHeightAt(z);
       const yaw = getRoadYawAt(z);
@@ -1705,7 +2097,7 @@ export function buildAlexDistrictEnvironment(
       poleL.position.set(-13.8, 3.8, 0);
       const poleR = new THREE.Mesh(garlandPoleGeo, wireMat);
       poleR.position.set(13.8, 3.8, 0);
-      const cable = new THREE.Mesh(new THREE.BoxGeometry(27.6, 0.08, 0.08), wireMat);
+      const cable = new THREE.Mesh(garlandCableGeo, wireMat);
       cable.position.set(0, 7.1, 0);
       garland.add(poleL, poleR, cable);
 
@@ -1723,68 +2115,248 @@ export function buildAlexDistrictEnvironment(
       group.add(garland);
     }
 
-    // Anfoushi City Entrance Arch
-    const anfoushiGate = buildOverheadGantry(
-      'أهلاً بكم في مدينة الأنفوشي',
-      'حلقة السمك · ميناء الصيادين · قصر رأس التين',
-      '#0F172A',
-      '#38BDF8',
-      '#FDE047',
-      maxAnisotropy,
-      isNight,
-      textures,
-    );
-    anfoushiGate.position.set(getRoadCenterX(-70), getRoadHeightAt(-70), -70);
-    anfoushiGate.rotation.y = getRoadYawAt(-70);
-    group.add(anfoushiGate);
+    // All 9 Ordered Overhead Highway Gantries (من قصر رأس التين حتى حلقة السمك وميناء الصيادين)
+    const anfGantries: [string, string, number, string, string, string][] = [
+      ['1. قصر رأس التين', 'نقطة البداية · ساحل الأنفوشي وبحري (٧.٢ كم)', -28, '#0F172A', '#FACC15', '#FFFFFF'],
+      ['2. طريق رأس التين البحري', 'مستشفى رأس التين العام · ٩٠٠ م', -840, '#0C4A6E', '#38BDF8', '#FFFFFF'],
+      ['3. شاطئ رأس التين', 'الشاطئ البحري المفتوح · ١٨٠٠ م', -1740, '#0369A1', '#FDE047', '#FFFFFF'],
+      ['4. شاطئ الأنفوشي', 'شاطئ وكبائن الأنفوشي · ٢٧٠٠ م', -2640, '#0C4A6E', '#38BDF8', '#FDE047'],
+      ['5. قلعة قايتباي', 'الحصن المملوكي على البحر · ٣٦٠٠ م', -3520, '#1E293B', '#FACC15', '#FFFFFF'],
+      ['6. لسان القلعة', 'نادي اليخت والكشافة البحرية · ٤٥٠٠ م', -4440, '#0F172A', '#38BDF8', '#FFFFFF'],
+      ['7. ميدان المساجد (الأنفوشي)', 'المرسي أبو العباس ومساجد الأنفوشي · ٥٤٠٠ م', -5340, '#064E3B', '#FACC15', '#FFFFFF'],
+      ['8. السيالة (بحري)', 'حي السيالة العريق والمقاهي البحرية · ٦٣٠٠ م', -6240, '#0F172A', '#FB7185', '#FDE047'],
+      ['9. حلقة السمك وميناء الصيادين', 'بحري · خط النهاية ٧٢٠٠ م', -7120, '#0C4A6E', '#FACC15', '#FFFFFF'],
+    ];
+    for (const [title, sub, gz, bg, border, accent] of anfGantries) {
+      const gate = buildOverheadGantry(title, sub, bg, border, accent, maxAnisotropy, isNight, textures);
+      gate.position.set(getRoadCenterX(gz), getRoadHeightAt(gz), gz);
+      gate.rotation.y = getRoadYawAt(gz);
+      group.add(gate);
+    }
 
-    // Halqa Fish Market Arch (حلقة سمك الأنفوشي) at z = -880
-    const halqaGate = buildOverheadGantry(
-      'حلقة سمك الأنفوشي',
-      'أشهر سوق سمك وميناء صيد في الإسكندرية',
-      '#0C4A6E',
-      '#FACC15',
-      '#FFFFFF',
-      maxAnisotropy,
-      isNight,
-      textures,
-    );
-    halqaGate.position.set(getRoadCenterX(-880), getRoadHeightAt(-880), -880);
-    halqaGate.rotation.y = getRoadYawAt(-880);
-    group.add(halqaGate);
-
-    // Anfoushi Historic Mosque & Sea Pier at z = -1740
-    const mosque = new THREE.Group();
     const creamMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.72 });
-    const domeMat = new THREE.MeshStandardMaterial({ color: 0x0d9488, roughness: 0.42, metalness: 0.25 });
-    const hall = new THREE.Mesh(new THREE.BoxGeometry(18, 9.5, 18), creamMat);
-    hall.position.y = 4.75;
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(6.2, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), domeMat);
-    dome.position.y = 9.4;
-    const minaret = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.5, 22, 10), creamMat);
-    minaret.position.set(7.5, 11, -7.5);
-    mosque.add(hall, dome, minaret);
-    mosque.position.set(getRoadCenterX(-1740) - 27, 0, -1740);
-    group.add(mosque);
-
-    // Ras El-Tin Royal Palace Colonnade (قصر رأس التين الملكي) at z = -2920
-    const palace = new THREE.Group();
     const marbleMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.45 });
     const roofGoldMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.35, metalness: 0.5 });
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(22, 11, 34), marbleMat);
-    wing.position.y = 5.5;
-    const cornice = new THREE.Mesh(new THREE.BoxGeometry(23.5, 1.1, 35.5), roofGoldMat);
-    cornice.position.y = 11.4;
-    palace.add(wing, cornice);
-    for (let cz = -12; cz <= 12; cz += 6) {
-      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.72, 10.5, 10), marbleMat);
-      col.position.set(11.6, 5.25, cz);
-      palace.add(col);
-    }
-    palace.position.set(getRoadCenterX(-2920) - 28, 0, -2920);
-    group.add(palace);
+    const domeMat = new THREE.MeshStandardMaterial({ color: 0x0d9488, roughness: 0.42, metalness: 0.25 });
+    const fortStoneMat = new THREE.MeshStandardMaterial({ color: 0xe2cca8, roughness: 0.85 });
+    const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0xb7a07d, roughness: 0.9 });
+    const hospBlueMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.45 });
+    const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.48 });
+    const darkWinMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.25 });
 
-    // Anfoushi Historic Coastal Lighthouse (فنار الأنفوشي) at z = -3460 with rotating warm beacon!
+    // 1. قصر رأس التين الملكي (Start — Left -X at z = -45)
+    {
+      const cz = -45;
+      const palace = new THREE.Group();
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(22, 11.5, 36), marbleMat);
+      wing.position.y = 5.75;
+      const cornice = new THREE.Mesh(new THREE.BoxGeometry(23.5, 1.2, 37.5), roofGoldMat);
+      cornice.position.y = 11.9;
+      palace.add(wing, cornice);
+      for (let wz = -12; wz <= 12; wz += 6) {
+        const col = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.72, 10.8, 10), marbleMat);
+        col.position.set(11.6, 5.4, wz);
+        palace.add(col);
+      }
+      palace.position.set(getRoadCenterX(cz) - 29, 0, cz);
+      palace.rotation.y = getRoadYawAt(cz);
+      group.add(palace);
+    }
+
+    // 2. مستشفى رأس التين العام (Left -X at z = -900)
+    {
+      const cz = -900;
+      const hospital = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(20, 14, 32), marbleMat);
+      body.position.y = 7;
+      const blueBand = new THREE.Mesh(new THREE.BoxGeometry(20.6, 1.8, 32.6), hospBlueMat);
+      blueBand.position.y = 13.6;
+      const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.6, 1.0), redMat);
+      crossV.position.set(10.2, 10.2, 0);
+      const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.0, 3.6), redMat);
+      crossH.position.set(10.2, 10.2, 0);
+      hospital.add(body, blueBand, crossV, crossH);
+      for (let wz = -11; wz <= 11; wz += 5.5) {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2.2, 2.8), hospBlueMat);
+        win.position.set(10.1, 5.2, wz);
+        hospital.add(win);
+      }
+      hospital.position.set(getRoadCenterX(cz) - 29, 0, cz);
+      hospital.rotation.y = getRoadYawAt(cz);
+      group.add(hospital);
+    }
+
+    // 3. شاطئ رأس التين (Coastal Beach Umbrellas & Sand Terrace on RIGHT +X at z = -1800)
+    {
+      const cz = -1800;
+      const beach = new THREE.Group();
+      const sandMat = new THREE.MeshStandardMaterial({ color: 0xe6cfa2, roughness: 0.92 });
+      const terrace = new THREE.Mesh(new THREE.BoxGeometry(16, 1.1, 44), sandMat);
+      terrace.position.set(22, -0.1, 0);
+      beach.add(terrace);
+      const umbColors = [0x0284c7, 0xfacc15, 0xef4444, 0x10b981, 0xf97316];
+      for (let i = 0; i < 6; i++) {
+        const uz = -16 + i * 6.5;
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.8, 6), marbleMat);
+        pole.position.set(21 + (i % 2) * 3.5, 1.6, uz);
+        const cap = new THREE.Mesh(
+          new THREE.ConeGeometry(2.1, 0.9, 8),
+          new THREE.MeshStandardMaterial({ color: umbColors[i % umbColors.length], roughness: 0.55 }),
+        );
+        cap.position.set(21 + (i % 2) * 3.5, 3.1, uz);
+        beach.add(pole, cap);
+      }
+      beach.position.set(getRoadCenterX(cz), 0, cz);
+      beach.rotation.y = getRoadYawAt(cz);
+      group.add(beach);
+    }
+
+    // 4. شاطئ الأنفوشي (Colorful Seaside Cabins & Beach Promenade on RIGHT +X at z = -2700)
+    {
+      const cz = -2700;
+      const anfBeach = new THREE.Group();
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(15, 1.2, 52), darkStoneMat);
+      deck.position.set(22, 0.1, 0);
+      anfBeach.add(deck);
+      const cabinCols = [0x0284c7, 0xfacc15, 0xf97316, 0x10b981, 0xe11d48];
+      for (let i = 0; i < 5; i++) {
+        const czOff = -20 + i * 10;
+        const cab = new THREE.Mesh(
+          new THREE.BoxGeometry(4.6, 3.2, 6.4),
+          new THREE.MeshStandardMaterial({ color: cabinCols[i], roughness: 0.58 }),
+        );
+        cab.position.set(22.5, 2.2, czOff);
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.35, 6.8), marbleMat);
+        roof.position.set(22.5, 3.95, czOff);
+        anfBeach.add(cab, roof);
+      }
+      anfBeach.position.set(getRoadCenterX(cz), 0, cz);
+      anfBeach.rotation.y = getRoadYawAt(cz);
+      group.add(anfBeach);
+    }
+
+    // 5. قلعة قايتباي المملوكية (On Sea Headland RIGHT +X at z = -3600)
+    {
+      const cz = -3600;
+      const fort = new THREE.Group();
+      const jetty = new THREE.Mesh(new THREE.BoxGeometry(22, 1.6, 7.5), darkStoneMat);
+      jetty.position.set(-11, 0.8, 0);
+      const base = new THREE.Mesh(new THREE.BoxGeometry(30, 2.2, 30), darkStoneMat);
+      base.position.y = 1.1;
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(25, 8.2, 25), fortStoneMat);
+      wall.position.y = 6.2;
+      const keep = new THREE.Mesh(new THREE.BoxGeometry(12.5, 14.5, 12.5), fortStoneMat);
+      keep.position.y = 9.5;
+      fort.add(jetty, base, wall, keep);
+      for (const [tx, tz] of [
+        [-11.8, -11.8],
+        [11.8, -11.8],
+        [-11.8, 11.8],
+        [11.8, 11.8],
+      ]) {
+        const tower = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.9, 12.2, 14), fortStoneMat);
+        tower.position.set(tx, 7.4, tz);
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(2.8, 2.8, 14), darkStoneMat);
+        cap.position.set(tx, 14.8, tz);
+        fort.add(tower, cap);
+      }
+      // Egyptian flag atop Qaitbay Citadel
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 7.5, 8), roofGoldMat);
+      pole.position.set(0, 20.2, 0);
+      const fRed = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.7, 0.12), redMat);
+      fRed.position.set(-1.8, 23.2, 0);
+      const fWhite = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.7, 0.12), marbleMat);
+      fWhite.position.set(-1.8, 22.5, 0);
+      const fBlack = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.7, 0.12), darkWinMat);
+      fBlack.position.set(-1.8, 21.8, 0);
+      fort.add(pole, fRed, fWhite, fBlack);
+
+      fort.position.set(getRoadCenterX(cz) + 34, 0, cz);
+      fort.rotation.y = getRoadYawAt(cz);
+      group.add(fort);
+    }
+
+    // 6. لسان القلعة · نادي اليخت والكشافة البحرية (Sea Tongue Pier & Yacht Club on RIGHT +X at z = -4500)
+    {
+      const cz = -4500;
+      const yachtClub = new THREE.Group();
+      const pier = new THREE.Mesh(new THREE.BoxGeometry(44, 1.5, 16), darkStoneMat);
+      pier.position.set(34, 0.4, 0);
+      const clubHouse = new THREE.Mesh(new THREE.BoxGeometry(16, 7.2, 22), marbleMat);
+      clubHouse.position.set(28, 4.7, 0);
+      const navyStripe = new THREE.Mesh(new THREE.BoxGeometry(16.4, 1.1, 22.4), hospBlueMat);
+      navyStripe.position.set(28, 8.2, 0);
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 12, 8), marbleMat);
+      mast.position.set(44, 6.8, 0);
+      const pennant = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.4, 0.12), hospBlueMat);
+      pennant.position.set(41.9, 11.4, 0);
+      yachtClub.add(pier, clubHouse, navyStripe, mast, pennant);
+      yachtClub.position.set(getRoadCenterX(cz), 0, cz);
+      yachtClub.rotation.y = getRoadYawAt(cz);
+      group.add(yachtClub);
+    }
+
+    // 7. ميدان المساجد (الأنفوشي) — Andalusian Mosque on LEFT -X at z = -5400
+    {
+      const cz = -5400;
+      const mosque = new THREE.Group();
+      const hall = new THREE.Mesh(new THREE.BoxGeometry(20, 10.5, 24), creamMat);
+      hall.position.y = 5.25;
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(6.4, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), domeMat);
+      dome.position.y = 10.4;
+      const sideDome1 = new THREE.Mesh(new THREE.SphereGeometry(3.4, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), domeMat);
+      sideDome1.position.set(0, 10.4, -7.8);
+      const sideDome2 = new THREE.Mesh(new THREE.SphereGeometry(3.4, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), domeMat);
+      sideDome2.position.set(0, 10.4, 7.8);
+      const minaret = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.6, 26, 10), creamMat);
+      minaret.position.set(8.2, 13, -8.5);
+      const minCap = new THREE.Mesh(new THREE.ConeGeometry(1.3, 3.6, 10), domeMat);
+      minCap.position.set(8.2, 27.6, -8.5);
+      mosque.add(hall, dome, sideDome1, sideDome2, minaret, minCap);
+      mosque.position.set(getRoadCenterX(cz) - 29, 0, cz);
+      mosque.rotation.y = getRoadYawAt(cz);
+      group.add(mosque);
+    }
+
+    // 8. السيالة (بحري) — Historic Bahary Waterfront Cafés & Colorful Arcade on LEFT -X at z = -6300
+    {
+      const cz = -6300;
+      const sayala = new THREE.Group();
+      const arcade = new THREE.Mesh(new THREE.BoxGeometry(16, 10, 34), creamMat);
+      arcade.position.y = 5;
+      sayala.add(arcade);
+      const awningCols = [0xdc2626, 0x0284c7, 0xd97706, 0x059669];
+      for (let i = 0; i < 4; i++) {
+        const az = -12 + i * 8;
+        const awn = new THREE.Mesh(
+          new THREE.BoxGeometry(3.2, 0.55, 6.6),
+          new THREE.MeshStandardMaterial({ color: awningCols[i], roughness: 0.5 }),
+        );
+        awn.position.set(9.2, 3.6, az);
+        sayala.add(awn);
+      }
+      sayala.position.set(getRoadCenterX(cz) - 28, 0, cz);
+      sayala.rotation.y = getRoadYawAt(cz);
+      group.add(sayala);
+    }
+
+    // 9. حلقة السمك وميناء الصيادين (بحري) + فنار بحري التاريخي (Finish at z = -7200)
+    {
+      const cz = -7200;
+      const halqaHall = new THREE.Group();
+      const marketBody = new THREE.Mesh(new THREE.BoxGeometry(20, 8.5, 32), creamMat);
+      marketBody.position.y = 4.25;
+      const marketRoof = new THREE.Mesh(new THREE.BoxGeometry(21.4, 1.4, 33.4), hospBlueMat);
+      marketRoof.position.y = 9.0;
+      const marketTrim = new THREE.Mesh(new THREE.BoxGeometry(21.6, 0.45, 33.6), roofGoldMat);
+      marketTrim.position.y = 9.85;
+      halqaHall.add(marketBody, marketRoof, marketTrim);
+      halqaHall.position.set(getRoadCenterX(cz) - 29, 0, cz);
+      halqaHall.rotation.y = getRoadYawAt(cz);
+      group.add(halqaHall);
+    }
+
+    // Historic Coastal Lighthouse (فنار بحري وميناء الصيادين) at z = -7200 with rotating warm beacon!
     const lighthouse = new THREE.Group();
     const lhWhite = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 });
     const lhRed = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 });
@@ -1819,20 +2391,23 @@ export function buildAlexDistrictEnvironment(
     beamCone.position.x = 17;
     beamPivot.add(beamCone);
     lighthouse.add(lantern, beamPivot);
-    lighthouse.position.set(getRoadCenterX(-3460) + 28, 0, -3460);
+    lighthouse.position.set(getRoadCenterX(-7200) + 28, 0, -7200);
     group.add(lighthouse);
 
-    // Lively Dense Fleet of Colorful Anfoushi Fishing Boats bobbing along the blue harbor!
+    // Lively Dense Fleet of Colorful Anfoushi & Bahary Fishing Boats bobbing along the entire 7.2km blue harbor!
     const anfBoats: Array<{ mesh: THREE.Group; baseY: number; phase: number }> = [];
     const palette = [0x1d4ed8, 0x059669, 0xdc2626, 0xd97706, 0x2563eb, 0xffffff];
-    const boatCount = isMobile ? 20 : 34;
-    for (let i = 0; i < boatCount; i++) {
-      const bz = -140 - i * (isMobile ? 165 : 98);
-      const boat = buildFishingBoat(palette[i % palette.length], i % 2 === 0 ? 0xffffff : 0xfef08a);
-      boat.position.set(getRoadCenterX(bz) + 25 + (i % 4) * 12, -0.68, bz);
-      boat.rotation.y = (i % 5) * 0.45 - 0.8;
+    const boatStep = isMobile ? 225 : 145;
+    let boatIdx = 0;
+    for (let bz = -140; bz >= -7160; bz -= boatStep) {
+      // Avoid clipping directly into Qaitbay Citadel (-3600) or Yacht Club Pier (-4500)
+      if (Math.abs(bz - -3600) < 42 || Math.abs(bz - -4500) < 30) continue;
+      const boat = buildFishingBoat(palette[boatIdx % palette.length], boatIdx % 2 === 0 ? 0xffffff : 0xfef08a);
+      boat.position.set(getRoadCenterX(bz) + 26 + (boatIdx % 4) * 12, -0.68, bz);
+      boat.rotation.y = (boatIdx % 5) * 0.45 - 0.8;
       group.add(boat);
-      anfBoats.push({ mesh: boat, baseY: -0.68, phase: i * 0.85 });
+      anfBoats.push({ mesh: boat, baseY: -0.68, phase: boatIdx * 0.85 });
+      boatIdx += 1;
     }
 
     updaters.push((dt, elapsed) => {
@@ -1856,9 +2431,9 @@ export function buildAlexDistrictEnvironment(
       color: 0x000000,
       fog: false,
     });
-    const sgGround = new THREE.Mesh(new THREE.PlaneGeometry(980, 4400), sgGroundMat);
+    const sgGround = new THREE.Mesh(new THREE.PlaneGeometry(1100, 9600), sgGroundMat);
     sgGround.rotation.x = -Math.PI / 2;
-    sgGround.position.set(12, -0.09, -1760);
+    sgGround.position.set(12, -0.09, -4250);
     group.add(sgGround);
 
     // 2. Drivable Parallel Side Bypass Street ("الشارع الجانبي الهادئ بعيد عن الزحام")
@@ -1893,7 +2468,7 @@ export function buildAlexDistrictEnvironment(
       9.65,
       16.75,
       120,
-      -3620,
+      -8620,
       5,
       () => 0.015,
       1,
@@ -1926,7 +2501,7 @@ export function buildAlexDistrictEnvironment(
       16.85,
       21.6,
       120,
-      -3620,
+      -8620,
       5,
       () => 0.24,
       2,
@@ -1944,11 +2519,11 @@ export function buildAlexDistrictEnvironment(
       roughness: 0.35,
     });
     const studPositions: Array<{ x: number; z: number; yaw: number }> = [];
-    for (let z = 60; z >= -3540; z -= 14) {
+    for (let z = 60; z >= -8520; z -= 14) {
       // Leave generous open ramp openings every ~140m & near intersections/station so players merge freely!
       const mod = Math.abs(z) % 140;
       if (mod < 48) continue;
-      if (Math.abs(z + 540) < 35 || Math.abs(z + 2720) < 65 || Math.abs(z + 2960) < 35) continue;
+      if (Math.abs(z + 180) < 68 || Math.abs(z + 1400) < 35 || Math.abs(z + 4900) < 35 || Math.abs(z + 7000) < 35) continue;
       studPositions.push({ x: getRoadCenterX(z) + 9.88, z, yaw: getRoadYawAt(z) });
     }
     if (studPositions.length > 0) {
@@ -1973,8 +2548,8 @@ export function buildAlexDistrictEnvironment(
       emissiveIntensity: isNight ? 2.8 : isSunset ? 1.6 : 0.4,
     });
     const outerLamps: Array<{ x: number; z: number; yaw: number }> = [];
-    for (let z = 60; z >= -3540; z -= isMobile ? 28 : 20) {
-      if (Math.abs(z + 2720) < 65) continue;
+    for (let z = 60; z >= -8520; z -= isMobile ? 34 : 24) {
+      if (Math.abs(z + 180) < 68) continue;
       outerLamps.push({ x: getRoadCenterX(z) + 17.55, z, yaw: getRoadYawAt(z) });
     }
     if (outerLamps.length > 0) {
@@ -2005,8 +2580,10 @@ export function buildAlexDistrictEnvironment(
       }
     }
 
-    // 3. Intersecting Cross Side Streets ("شوارع جانبية متفرعة يمين وشمال") cutting between city blocks!
-    const crossStreetZs = [-380, -760, -960, -1380, -1620, -1960, -2140, -2450, -2860, -3100, -3260, -3380];
+    // 3. Intersecting Cross Side Streets ("شوارع جانبية متفرعة يمين وشمال") cutting between city blocks across 8.4 km!
+    const crossStreetZs = [
+      -460, -960, -1680, -2420, -3100, -3780, -4500, -5220, -5920, -6620, -7320, -8020,
+    ];
     const crossAsphaltMat = new THREE.MeshBasicMaterial({
       color: 0x000000,
       fog: false,
@@ -2078,68 +2655,108 @@ export function buildAlexDistrictEnvironment(
       group.add(cg);
     });
 
-    // 4. Overhead Highway & Turn Guide Gantries matching EVERY Requested Landmark & Turn!
+    // 4. Overhead Highway Gantries matching ALL 13 Ordered Areas (Sidi Gaber -> Abu Qir Street -> El-Mandara, 8.4 km)!
     const sgGantries = [
       {
-        z: -150,
-        title: 'سيدي جابر ↗ · ملف قبل المكتبة',
-        sub: 'طريق سيدي جابر الداخلي · شوارع جانبية بعيد عن الزحام ↗',
+        z: -55,
+        title: '1. سيدي جابر · بداية شارع أبو قير',
+        sub: 'محطة قطار سيدي جابر على يمينك 🚉 · الطريق ٨.٤ كم حتى المندرة',
         bg: '#065F46',
         border: '#FACC15',
         text: '#FFFFFF',
       },
       {
-        z: -620,
-        title: 'ملف يمين ↱ · مدينة سيدي جابر',
-        sub: 'بعد الإشارة ملف يمين ← بيوت وقهاوي ومحلات سيدي جابر',
+        z: -700,
+        title: '2. مصطفى كامل · شارع أبو قير',
+        sub: 'طريق الحرية · الشارع الجانبي الهادئ على يمينك ↗',
         bg: '#0C4A6E',
         border: '#38BDF8',
         text: '#FEF08A',
       },
       {
-        z: -1025,
-        title: 'ملف ثالث شمال ↰ · قلب سيدي جابر',
-        sub: 'لف شمال وسط العمارات والقهاوي · الشارع الجانبي يمينك مفتوح',
+        z: -1340,
+        title: '3. رشدي · طريق الحرية',
+        sub: 'قلب رشدي · محلات وكافيهات وإشارة مرور رئيسية',
         bg: '#0C4A6E',
         border: '#FACC15',
         text: '#FFFFFF',
       },
       {
-        z: -1640,
-        title: 'بعد ٥ كم · ملف شمال ↰',
-        sub: 'كمل ٦ كم طوالي نحو ملف محطة سيدي جابر',
+        z: -2100,
+        title: '4. كفر عبده والوزارة (بولكلي)',
+        sub: 'مدخل كفر عبده وبولكلي · شارع أبو قير',
         bg: '#1E3A8A',
         border: '#FACC15',
         text: '#FEF08A',
       },
       {
-        z: -2180,
-        title: 'بعد ٦ كم · ملف شمال ↰',
-        sub: 'بعد ٣ كم ملف يمين ← محطة قطار سيدي جابر على اليمين',
+        z: -2800,
+        title: '5. فلمنج · شارع أبو قير',
+        sub: 'حي فلمنج العريق · كمل طوالي نحو جناكليس ولوران',
         bg: '#1E3A8A',
         border: '#38BDF8',
         text: '#FFFFFF',
       },
       {
-        z: -2505,
-        title: 'ملف يمين ↱ · محطة قطار سيدي جابر',
-        sub: 'لف يمين — محطة قطار سيدي جابر مباشرة على يمينك 🚉',
+        z: -3500,
+        title: '6. جناكليس · طريق الحرية',
+        sub: 'منطقة جناكليس · بيوت وقهاوي ومحلات الإسكندرية',
+        bg: '#065F46',
+        border: '#FACC15',
+        text: '#FEF08A',
+      },
+      {
+        z: -4200,
+        title: '7. شوتس وسان ستيفانو',
+        sub: 'امتداد شارع أبو قير · مطلع سان ستيفانو ولوران',
+        bg: '#0C4A6E',
+        border: '#38BDF8',
+        text: '#FFFFFF',
+      },
+      {
+        z: -4840,
+        title: '8. لوران · تقاطع شعراوي',
+        sub: 'قلب لوران · إشارة المرور الرئيسية ← فيكتوريا',
         bg: '#7C2D12',
         border: '#FACC15',
         text: '#FEF08A',
       },
       {
-        z: -3015,
-        title: 'شارع أبو قير (طريق الحرية) ← المندرة',
-        sub: 'طوالي على طول شارع أبو قير حتى المندرة · بيوت وقهاوي ومحلات',
-        bg: '#065F46',
+        z: -5600,
+        title: '9. فيكتوريا · ميدان فيكتوريا',
+        sub: 'نهاية طريق الحرية وبداية شارع جمال عبد الناصر ← المندرة',
+        bg: '#7C2D12',
+        border: '#38BDF8',
+        text: '#FFFFFF',
+      },
+      {
+        z: -6300,
+        title: '10. محمد نجيب · شارع جمال عبد الناصر',
+        sub: 'تقاطع محمد نجيب التجاري · استمر طوالي نحو سيدي بشر',
+        bg: '#1E3A8A',
         border: '#FACC15',
         text: '#FEF08A',
       },
       {
-        z: -3480,
-        title: 'المندرة · نهاية شارع أبو قير',
-        sub: 'وصلت المندرة بالسلامة · شارع أبو قير',
+        z: -6940,
+        title: '11. سيدي بشر · شارع جمال عبد الناصر',
+        sub: 'قلب سيدي بشر وإشارة المرور الرئيسية ← ميامي والعصافرة',
+        bg: '#0C4A6E',
+        border: '#FACC15',
+        text: '#FFFFFF',
+      },
+      {
+        z: -7700,
+        title: '12. ميامي والعصافرة · جمال عبد الناصر',
+        sub: 'باقي ٧٠٠ متر على بوابة المندرة · خط النهاية',
+        bg: '#065F46',
+        border: '#4ADE80',
+        text: '#FEF08A',
+      },
+      {
+        z: -8370,
+        title: '13. المندرة · نهاية شارع أبو قير',
+        sub: 'وصلت المندرة بالسلامة · نهاية الطريق (٨.٤ كم)',
         bg: '#0F172A',
         border: '#FACC15',
         text: '#FEF08A',
@@ -2216,10 +2833,11 @@ export function buildAlexDistrictEnvironment(
       group.add(bg);
     };
 
-    buildFullStreetSignalBridge(-540, 'إشارة مرور سيدي جابر · ٢ كم', 'إشارة بطول الشارع — بعدها ملف يمين');
-    buildFullStreetSignalBridge(-2960, 'إشارة مرور تقاطع شارع أبو قير', 'بعد ٣ كم طوالي من المحطة · ادخل شارع أبو قير ← المندرة');
+    buildFullStreetSignalBridge(-1400, 'إشارة مرور رشدي · شارع أبو قير', 'تقاطع رشدي وكفر عبده — كمل طوالي نحو بولكلي وفلمنج');
+    buildFullStreetSignalBridge(-4900, 'إشارة مرور لوران · شارع شعراوي', 'تقاطع لوران الرئيسي — استعد لميدان فيكتوريا');
+    buildFullStreetSignalBridge(-7000, 'إشارة مرور سيدي بشر · جمال عبد الناصر', 'تقاطع سيدي بشر — كمل طوالي نحو ميامي والعصافرة والمندرة');
 
-    // 6. MONUMENTAL LANDMARK (z = -2720, ON THE RIGHT +X): محطة قطار سيدي جابر (Sidi Gaber Train Station)
+    // 6. MONUMENTAL LANDMARK (z = -180, ON THE RIGHT +X): محطة قطار سيدي جابر (Sidi Gaber Train Station at Route Start!)
     const stationGroup = new THREE.Group();
     const stoneCreamMat = new THREE.MeshStandardMaterial({ color: 0xf5ecd8, roughness: 0.72 });
     const stoneTrimMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.55 });
@@ -2349,8 +2967,8 @@ export function buildAlexDistrictEnvironment(
     sgTrain.position.set(58, 0.45, 0);
     stationGroup.add(sgTrain);
 
-    stationGroup.position.set(getRoadCenterX(-2720), 0, -2720);
-    stationGroup.rotation.y = getRoadYawAt(-2720);
+    stationGroup.position.set(getRoadCenterX(-180), 0, -180);
+    stationGroup.rotation.y = getRoadYawAt(-180);
     group.add(stationGroup);
 
     // 7. COMPLETE CITY ON BOTH SIDES: Dense Houses/Apartments, Egyptian Cafés ("قهاوي") & Illuminated Shops ("محلات")
@@ -2375,16 +2993,22 @@ export function buildAlexDistrictEnvironment(
 
     const sgBldgGeo = new THREE.BoxGeometry(1, 1, 1);
     const sgBldgBuckets: Array<THREE.Matrix4[]> = sgFacadeMats.map(() => []);
-    const bldgStep = isMobile ? 28 : 21;
+    const bldgStep = isMobile ? 34 : 26;
 
-    for (let z = 65; z >= -3550; z -= bldgStep) {
+    for (let z = 65; z >= -8550; z -= bldgStep) {
       // Leave clean open space for Sidi Gaber Train Station on the right
-      const nearStation = Math.abs(z + 2720) < 68;
+      const nearStation = Math.abs(z + 180) < 68;
       // Leave clean open cross side streets
       const nearCross = crossStreetZs.some((cz) => Math.abs(z - cz) < 15);
       // Leave clean space for right-side gas stations
       const nearRightGas =
-        Math.abs(z + 195) < 24 || Math.abs(z + 840) < 24 || Math.abs(z + 1940) < 24 || Math.abs(z + 2960) < 24;
+        Math.abs(z + 240) < 28 ||
+        Math.abs(z + 1360) < 28 ||
+        Math.abs(z + 2640) < 28 ||
+        Math.abs(z + 3920) < 28 ||
+        Math.abs(z + 5360) < 28 ||
+        Math.abs(z + 6680) < 28 ||
+        Math.abs(z + 8040) < 28;
 
       const rx = getRoadCenterX(z);
       const yaw = getRoadYawAt(z);
@@ -2462,7 +3086,8 @@ export function buildAlexDistrictEnvironment(
     const cafeTableMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
 
     const cafeZs = [
-      -260, -450, -690, -890, -1120, -1290, -1490, -1750, -2040, -2280, -2400, -2590, -2810, -3050, -3180, -3320, -3430,
+      -340, -610, -840, -1160, -1540, -1940, -2280, -2640, -2960, -3340, -3660, -4020,
+      -4360, -4720, -5080, -5440, -5780, -6140, -6480, -6840, -7180, -7540, -7880, -8220,
     ];
     cafeZs.forEach((cz, idx) => {
       const rx = getRoadCenterX(cz);

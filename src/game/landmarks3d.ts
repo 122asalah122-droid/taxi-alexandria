@@ -51,16 +51,21 @@ function addLandmarkSignboard(
   parent.add(poleL, poleR, board);
 }
 
+const SHARED_GANTRY_POST_GEO = new THREE.CylinderGeometry(0.22, 0.26, 8.2, 10);
+const SHARED_GANTRY_BEAM_GEO = new THREE.BoxGeometry(20.9, 0.45, 0.45);
+const SHARED_GANTRY_SIGN_GEO = new THREE.BoxGeometry(9.8, 3.3, 0.28);
+
 function addBlueHighwayGantry(
   parent: THREE.Group,
   districtName: string,
   subLabel: string,
   z: number,
   maxAnisotropy: number,
+  steelMat: THREE.Material,
+  backMat: THREE.Material,
   baseY = 0,
   isNight = false,
 ) {
-  const steelMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85, roughness: 0.28 });
   const signTex = createBlueHighwaySignTexture(districtName, subLabel, maxAnisotropy);
   const signMat = new THREE.MeshStandardMaterial({
     map: signTex,
@@ -69,22 +74,21 @@ function addBlueHighwayGantry(
     emissiveIntensity: isNight ? 0.92 : 0.14,
     roughness: 0.32,
   });
-  const backMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
 
   const gantry = new THREE.Group();
   gantry.position.set(getRoadCenterX(z), baseY, z);
   gantry.rotation.y = getRoadYawAt(z);
 
-  const postL = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 8.2, 10), steelMat);
+  const postL = new THREE.Mesh(SHARED_GANTRY_POST_GEO, steelMat);
   postL.position.set(-10.2, 4.1, 0);
-  const postR = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 8.2, 10), steelMat);
+  const postR = new THREE.Mesh(SHARED_GANTRY_POST_GEO, steelMat);
   postR.position.set(10.2, 4.1, 0);
 
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(20.9, 0.45, 0.45), steelMat);
+  const beam = new THREE.Mesh(SHARED_GANTRY_BEAM_GEO, steelMat);
   beam.position.set(0, 7.8, 0);
 
   const signBox = new THREE.Mesh(
-    new THREE.BoxGeometry(9.8, 3.3, 0.28),
+    SHARED_GANTRY_SIGN_GEO,
     [backMat, backMat, backMat, backMat, signMat, backMat],
   );
   signBox.position.set(0, 7.6, 0.25);
@@ -395,26 +399,50 @@ export function buildAllAlexandriaLandmarks(
       });
 
   // ============================================================================
-  // BLUE HIGHWAY DISTRICT SIGNS (المندرة ← العصافرة ← سيدي بشر ← ستانلي ← بحري)
+  // ALL 26 ALEXANDRIA CORNICHE BLUE HIGHWAY GANTRY SIGNS (المنتزه -> قلعة قايتباي)
   // ============================================================================
-  addBlueHighwayGantry(worldGroup, 'المندرة · قصر المنتزه', 'بوابة وقصر المنتزه · نقطة البداية', -28, maxAnisotropy, 0, isNight);
-  addBlueHighwayGantry(worldGroup, 'العصافرة', 'كورنيش العصافرة · البحر على اليمين', -290, maxAnisotropy, 0, isNight);
-  addBlueHighwayGantry(worldGroup, 'سيدي بشر وميامي', 'مسجد سيدي بشر · البحر على اليمين', -540, maxAnisotropy, 0, isNight);
-  addBlueHighwayGantry(worldGroup, 'كوبري ستانلي', 'خليج ستانلي الملكي', -1095, maxAnisotropy, 0, isNight);
-  addBlueHighwayGantry(worldGroup, 'الشاطبي', 'مكتبة الإسكندرية على الشمال', -1720, maxAnisotropy, 0, isNight);
-  addBlueHighwayGantry(worldGroup, 'محطة الرمل', 'مسجد القائد إبراهيم ووسط البلد', -2270, maxAnisotropy, 0, isNight);
-  addBlueHighwayGantry(worldGroup, 'المنشية', 'ميدان الجندي المجهول', -2690, maxAnisotropy, 0, isNight);
-  addBlueHighwayGantry(worldGroup, 'المرسي أبو العباس', 'ميدان المساجد · بحري', -3100, maxAnisotropy, 0, isNight);
-  addBlueHighwayGantry(worldGroup, 'بحري · قلعة قايتباي', 'الميناء الشرقي · خط النهاية', -3430, maxAnisotropy, 0, isNight);
+  const gantrySteelMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85, roughness: 0.28 });
+  const gantryBackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+  const cornicheGantries: [string, string, number][] = [
+    ['1. المنتزه (قصر المنتزه)', 'قصر وحدائق المنتزه · نقطة البداية', -28],
+    ['2. المندرة', 'كورنيش المندرة · ٤٠٠ م', -360],
+    ['3. العصافرة', 'شاطئ وكورنيش العصافرة · ٨٠٠ م', -760],
+    ['4. ميامي', 'شاطئ ميامي · ١٢٠٠ م', -1160],
+    ['5. سيدي بشر', 'مسجد سيدي بشر الكبير · ١٦٠٠ م', -1540],
+    ['6. السرايا', 'كورنيش السرايا · ٢٠٠٠ م', -1960],
+    ['7. لوران', 'حي لوران · ٢٤٠٠ م', -2360],
+    ['8. ثروت', 'كورنيش ثروت · ٢٨٠٠ م', -2760],
+    ['9. سان ستيفانو', 'جراند بلازا · ٣٢٠٠ م', -3160],
+    ['10. جليم', 'خليج جليم · ٣٦٠٠ م', -3560],
+    ['11. سابا باشا', 'كورنيش سابا باشا · ٤٠٠٠ م', -3960],
+    ['12. ستانلي', 'كوبري ستانلي الملكي · ٤٤٠٠ م', STANLEY_BRIDGE_Z + 108],
+    ['13. رشدي', 'كورنيش رشدي · ٤٨٠٠ م', -4760],
+    ['14. مصطفى كامل', 'أبراج مصطفى كامل · ٥٢٠٠ م', -5160],
+    ['15. سيدي جابر', 'كورنيش سيدي جابر · ٥٦٠٠ م', -5560],
+    ['16. كليوباترا', 'شاطئ كليوباترا · ٦٠٠٠ م', -5960],
+    ['17. سبورتنج', 'كورنيش سبورتنج · ٦٤٠٠ م', -6360],
+    ['18. الإبراهيمية', 'حي الإبراهيمية · ٦٨٠٠ م', -6760],
+    ['19. كامب شيزار', 'كورنيش كامب شيزار · ٧٢٠٠ م', -7160],
+    ['20. الشاطبي', 'مكتبة الإسكندرية على الشمال · ٧٦٠٠ م', -7540],
+    ['21. الأزاريطة (السلسلة)', 'لسان السلسلة · ٨٠٠٠ م', -7960],
+    ['22. محطة الرمل', 'مسجد القائد إبراهيم · ٨٤٠٠ م', -8340],
+    ['23. المنشية', 'ميدان الجندي المجهول · ٨٨٠٠ م', -8740],
+    ['24. بحري (السيالة)', 'مسجد المرسي أبو العباس · ٩٢٠٠ م', -9140],
+    ['25. الأنفوشي', 'ميناء الصيادين · ٩٦٠٠ م', -9560],
+    ['26. قلعة قايتباي (رأس التين)', 'الميناء الشرقي · خط النهاية ١٠ كم', -9920],
+  ];
+  for (const [title, sub, gz] of cornicheGantries) {
+    addBlueHighwayGantry(worldGroup, title, sub, gz, maxAnisotropy, gantrySteelMat, gantryBackMat, 0, isNight);
+  }
 
   // ============================================================================
-  // 8. قلعة قايتباي الحجرية + مراكب صيد واقعية في البحر (بحري · خط النهاية z = -3500)
+  // 26. قلعة قايتباي (رأس التين) + أسطول مراكب صيد وشراع بطول الكورنيش (z = -10000)
   // ============================================================================
   {
-    const cz = -3500;
+    const cz = -10000;
     const cx = getRoadCenterX(cz);
     const g = new THREE.Group();
-    // Qaitbay Citadel stands out in the Mediterranean Sea on the RIGHT (+X) peninsula at Bahary
+    // Qaitbay Citadel stands out in the Mediterranean Sea on the RIGHT (+X) peninsula at Ras El-Tin
     g.position.set(cx + 35, 0, cz);
     g.rotation.y = getRoadYawAt(cz);
 
@@ -486,10 +514,10 @@ export function buildAllAlexandriaLandmarks(
     flagBlack.position.set(-1.9, 22.66, 0);
     g.add(pole, flagRed, flagWhite, flagBlack);
 
-    addLandmarkSignboard(g, 'قلعة قايتباي', 'بحري · خط النهاية ٣٥٠٠ م', '#FACC15', -19.5, 5.2, 16, maxAnisotropy);
+    addLandmarkSignboard(g, 'قلعة قايتباي (رأس التين)', 'خط النهاية · ١٠,٠٠٠ م', '#FACC15', -19.5, 5.2, 16, maxAnisotropy, isNight);
     worldGroup.add(g);
 
-    // Rich Fleet of Alexandrian Fishing Boats & White Mediterranean Sailboats bobbing across the blue sea!
+    // Rich Fleet of Alexandrian Fishing Boats & White Mediterranean Sailboats bobbing across the ENTIRE 10km blue sea!
     const sailMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       roughness: 0.72,
@@ -497,77 +525,50 @@ export function buildAllAlexandriaLandmarks(
       emissive: isNight ? 0x334155 : 0x000000,
       emissiveIntensity: isNight ? 0.35 : 0,
     });
-    const allBoatSpecs: { ox: number; z: number; rot: number; hull: number; stripe: number; type: 'fishing' | 'sail' }[] = [
-      { ox: 25, z: -90, rot: -0.24, hull: 0x1d4ed8, stripe: 0xfacc15, type: 'fishing' },
-      { ox: 44, z: -125, rot: 0.32, hull: 0xffffff, stripe: 0x1d4ed8, type: 'sail' },
-      { ox: 30, z: -165, rot: 0.22, hull: 0xdc2626, stripe: 0xffffff, type: 'fishing' },
-      { ox: 62, z: -205, rot: -0.35, hull: 0xffffff, stripe: 0xdc2626, type: 'sail' },
-      { ox: 28, z: -255, rot: -0.18, hull: 0x059669, stripe: 0xfef3c7, type: 'fishing' },
-      { ox: 48, z: -315, rot: 0.16, hull: 0x1d4ed8, stripe: 0xf97316, type: 'fishing' },
-      { ox: 34, z: -380, rot: -0.28, hull: 0xffffff, stripe: 0x0284c7, type: 'sail' },
-      { ox: 72, z: -440, rot: 0.4, hull: 0xea580c, stripe: 0xffffff, type: 'fishing' },
-      { ox: 27, z: -510, rot: -0.22, hull: 0x0369a1, stripe: 0xffffff, type: 'fishing' },
-      { ox: 52, z: -585, rot: 0.25, hull: 0xffffff, stripe: 0x059669, type: 'sail' },
-      { ox: 31, z: -660, rot: -0.15, hull: 0xb91c1c, stripe: 0xfacc15, type: 'fishing' },
-      { ox: 66, z: -740, rot: -0.32, hull: 0xffffff, stripe: 0x1d4ed8, type: 'sail' },
-      { ox: 34, z: -830, rot: 0.18, hull: 0x7c2d12, stripe: 0xfacc15, type: 'fishing' },
-      { ox: 46, z: -910, rot: -0.22, hull: 0x2563eb, stripe: 0xffffff, type: 'fishing' },
-      { ox: 58, z: -990, rot: 0.3, hull: 0xffffff, stripe: 0xdc2626, type: 'sail' },
-      { ox: 29, z: -1075, rot: 0.24, hull: 0xb91c1c, stripe: 0xfde047, type: 'fishing' },
-      { ox: 42, z: -1155, rot: -0.2, hull: 0xffffff, stripe: 0x2563eb, type: 'sail' },
-      { ox: 36, z: -1325, rot: 0.28, hull: 0x059669, stripe: 0xffffff, type: 'fishing' },
-      { ox: 60, z: -1410, rot: -0.24, hull: 0xffffff, stripe: 0xf97316, type: 'sail' },
-      { ox: 28, z: -1495, rot: 0.14, hull: 0x1d4ed8, stripe: 0xfacc15, type: 'fishing' },
-      { ox: 48, z: -1580, rot: -0.3, hull: 0xdc2626, stripe: 0xffffff, type: 'fishing' },
-      { ox: 32, z: -1680, rot: -0.2, hull: 0x0ea5e9, stripe: 0xdc2626, type: 'fishing' },
-      { ox: 56, z: -1765, rot: 0.35, hull: 0xffffff, stripe: 0x1d4ed8, type: 'sail' },
-      { ox: 30, z: -1855, rot: -0.18, hull: 0xd97706, stripe: 0xffffff, type: 'fishing' },
-      { ox: 68, z: -1950, rot: 0.22, hull: 0xffffff, stripe: 0x059669, type: 'sail' },
-      { ox: 34, z: -2045, rot: -0.26, hull: 0x2563eb, stripe: 0xfacc15, type: 'fishing' },
-      { ox: 50, z: -2140, rot: 0.18, hull: 0xffffff, stripe: 0xdc2626, type: 'sail' },
-      { ox: 29, z: -2240, rot: -0.22, hull: 0x059669, stripe: 0xfef3c7, type: 'fishing' },
-      { ox: 62, z: -2345, rot: 0.28, hull: 0xb91c1c, stripe: 0xffffff, type: 'fishing' },
-      { ox: 36, z: -2450, rot: -0.34, hull: 0xffffff, stripe: 0x1d4ed8, type: 'sail' },
-      { ox: 48, z: -2560, rot: 0.16, hull: 0x0284c7, stripe: 0xfacc15, type: 'fishing' },
-      { ox: 27, z: -2670, rot: -0.18, hull: 0x059669, stripe: 0xfacc15, type: 'fishing' },
-      { ox: 54, z: -2775, rot: 0.3, hull: 0xffffff, stripe: 0xf97316, type: 'sail' },
-      { ox: 32, z: -2880, rot: -0.24, hull: 0xdc2626, stripe: 0xffffff, type: 'fishing' },
-      { ox: 64, z: -2985, rot: 0.2, hull: 0xffffff, stripe: 0x2563eb, type: 'sail' },
-      { ox: 30, z: -3085, rot: -0.16, hull: 0x1d4ed8, stripe: 0xfde047, type: 'fishing' },
-      { ox: 46, z: -3170, rot: 0.26, hull: 0xffffff, stripe: 0x059669, type: 'sail' },
-      { ox: 31, z: -3245, rot: 0.2, hull: 0x0284c7, stripe: 0xffffff, type: 'fishing' },
-      { ox: 52, z: -3325, rot: -0.28, hull: 0xffffff, stripe: 0xdc2626, type: 'sail' },
-      { ox: 25, z: -3410, rot: -0.3, hull: 0xdc2626, stripe: 0xfacc15, type: 'fishing' },
-      { ox: 40, z: -3485, rot: 0.22, hull: 0xffffff, stripe: 0x1d4ed8, type: 'sail' },
-    ];
-    const boatSpecs = isMobile ? allBoatSpecs.filter((_, i) => i % 3 !== 2) : allBoatSpecs;
-    boatSpecs.forEach((spec, idx) => {
-      const boat =
-        spec.type === 'sail'
-          ? createMediterraneanSailboat(spec.hull, spec.stripe, sailMat, woodMat, woodDeckMat)
-          : createRealisticFishingBoat(
-              spec.hull,
-              spec.stripe,
-              creamMat,
-              woodDeckMat,
-              woodMat,
-              windowDarkMat,
-              ropeMat,
-              lifebuoyMat,
-              goldMat,
-            );
-      boat.position.set(getRoadCenterX(spec.z) + spec.ox, -0.68, spec.z);
-      boat.rotation.y = spec.rot + getRoadYawAt(spec.z);
+    const fishingHulls = [0x1d4ed8, 0xdc2626, 0x059669, 0xea580c, 0x0369a1, 0xb91c1c, 0x7c2d12, 0x2563eb];
+    const fishingStripes = [0xfacc15, 0xffffff, 0xfef3c7, 0xf97316, 0xfde047, 0xdc2626];
+    const sailStripes = [0x1d4ed8, 0xdc2626, 0x0284c7, 0x059669, 0xf97316, 0x2563eb];
+    const boatStepZ = isMobile ? 220 : 145;
+    let boatIdx = 0;
+    for (let bz = -105; bz >= -9960; bz -= boatStepZ) {
+      if (Math.abs(bz - STANLEY_BRIDGE_Z) < 115) continue;
+      const isSail = boatIdx % 3 === 1;
+      const ox = isSail
+        ? 38 + ((boatIdx * 17) % 32)
+        : 25 + ((boatIdx * 13) % 24);
+      const rot = ((boatIdx % 7) - 3) * 0.11;
+      const boat = isSail
+        ? createMediterraneanSailboat(
+            0xffffff,
+            sailStripes[boatIdx % sailStripes.length],
+            sailMat,
+            woodMat,
+            woodDeckMat,
+          )
+        : createRealisticFishingBoat(
+            fishingHulls[boatIdx % fishingHulls.length],
+            fishingStripes[boatIdx % fishingStripes.length],
+            creamMat,
+            woodDeckMat,
+            woodMat,
+            windowDarkMat,
+            ropeMat,
+            lifebuoyMat,
+            goldMat,
+          );
+      boat.position.set(getRoadCenterX(bz) + ox, -0.68, bz);
+      boat.rotation.y = rot + getRoadYawAt(bz);
       worldGroup.add(boat);
-      animatedBoats.push({ mesh: boat, baseY: -0.68, phase: idx * 0.95 });
-    });
+      animatedBoats.push({ mesh: boat, baseY: -0.68, phase: boatIdx * 0.95 });
+      boatIdx += 1;
+    }
   }
 
   // ============================================================================
-  // 7. مسجد المرسي أبو العباس الملوّن بالأبلق والزخارف الأندلسية (الشمال · -X — z = -3150)
+  // 24. مسجد المرسي أبو العباس الملوّن بالأبلق والزخارف الأندلسية (بحري · السيالة — z = -9200)
   // ============================================================================
   {
-    const cz = -3150;
+    const cz = -9200;
     const g = new THREE.Group();
     g.position.set(getRoadCenterX(cz) - 33, 0, cz);
     g.rotation.y = getRoadYawAt(cz);
@@ -652,15 +653,15 @@ export function buildAllAlexandriaLandmarks(
       minCupola,
       minCrescent,
     );
-    addLandmarkSignboard(g, 'مسجد المرسي أبو العباس', 'ميدان المساجد · بحري', '#FBBF24', 11.5, 5.2, 14, maxAnisotropy);
+    addLandmarkSignboard(g, 'مسجد المرسي أبو العباس', 'بحري (السيالة) · ٩٢٠٠ م', '#FBBF24', 11.5, 5.2, 14, maxAnisotropy, isNight);
     worldGroup.add(g);
   }
 
   // ============================================================================
-  // 6. المنشية والنصب التذكاري للجندي المجهول — z = -2740
+  // 23. المنشية والنصب التذكاري للجندي المجهول — z = -8800
   // ============================================================================
   {
-    const cz = -2740;
+    const cz = -8800;
     const g = new THREE.Group();
     g.position.set(getRoadCenterX(cz), 0, cz);
     g.rotation.y = getRoadYawAt(cz);
@@ -701,15 +702,15 @@ export function buildAllAlexandriaLandmarks(
     }
     g.add(hall, pediment);
 
-    addLandmarkSignboard(g, 'المنشية والجندي المجهول', 'قلب الإسكندرية · ٢٧٤٠ م', '#38BDF8', -20.5, 5.2, 15, maxAnisotropy);
+    addLandmarkSignboard(g, 'المنشية والجندي المجهول', 'قلب الإسكندرية · ٨٨٠٠ م', '#38BDF8', -20.5, 5.2, 15, maxAnisotropy, isNight);
     worldGroup.add(g);
   }
 
   // ============================================================================
-  // 5. محطة الرمل ومسجد القائد إبراهيم الملوّن (الشمال · -X — z = -2320)
+  // 22. محطة الرمل ومسجد القائد إبراهيم الملوّن (الشمال · -X — z = -8400)
   // ============================================================================
   {
-    const cz = -2320;
+    const cz = -8400;
     const g = new THREE.Group();
     g.position.set(getRoadCenterX(cz) - 32, 0, cz);
     g.rotation.y = getRoadYawAt(cz);
@@ -763,15 +764,15 @@ export function buildAllAlexandriaLandmarks(
     p2.position.set(8.5, 0, -15);
 
     g.add(mainHall, frieze, domeDrum, mainDome, domeCrest, minLower, minUpper, minTop, minCres, p1, p2);
-    addLandmarkSignboard(g, 'مسجد القائد إبراهيم', 'محطة الرمل · ٢٣٢٠ م', '#10B981', 11, 5.2, 16, maxAnisotropy);
+    addLandmarkSignboard(g, 'مسجد القائد إبراهيم', 'محطة الرمل · ٨٤٠٠ م', '#10B981', 11, 5.2, 16, maxAnisotropy, isNight);
     worldGroup.add(g);
   }
 
   // ============================================================================
-  // 4. مكتبة الإسكندرية على الشمال (الشاطبي · -X side) — z = -1780
+  // 20. مكتبة الإسكندرية على الشمال (الشاطبي · -X side) — z = -7600
   // ============================================================================
   {
-    const cz = -1780;
+    const cz = -7600;
     const g = new THREE.Group();
     g.position.set(getRoadCenterX(cz) - 35, 0, cz);
     g.rotation.y = getRoadYawAt(cz);
@@ -812,12 +813,12 @@ export function buildAllAlexandriaLandmarks(
     }
 
     g.add(plazaDeck, pool, cylinderBody, glassRoof, planetarium, cradle);
-    addLandmarkSignboard(g, 'مكتبة الإسكندرية', 'على الشمال · الشاطبي', '#A78BFA', 13, 5.2, 19, maxAnisotropy);
+    addLandmarkSignboard(g, 'مكتبة الإسكندرية', 'الشاطبي · ٧٦٠٠ م', '#A78BFA', 13, 5.2, 19, maxAnisotropy, isNight);
     worldGroup.add(g);
   }
 
   // ============================================================================
-  // 6. كوبري ستانلي الملوّن بأبراجه الملكية + كبائن خليج ستانلي (z = -2300)
+  // 12. كوبري ستانلي الملوّن بأبراجه الملكية + كبائن خليج ستانلي (z = -4400)
   // ============================================================================
   {
     const bridgeGroup = new THREE.Group();
@@ -965,10 +966,10 @@ export function buildAllAlexandriaLandmarks(
   }
 
   // ============================================================================
-  // 2. مسجد سيدي بشر الكبير الملوّن (سيدي بشر · ميامي — الشمال -X — z = -580)
+  // 5. مسجد سيدي بشر الكبير الملوّن (سيدي بشر — الشمال -X — z = -1600)
   // ============================================================================
   {
-    const cz = -580;
+    const cz = -1600;
     const g = new THREE.Group();
     g.position.set(getRoadCenterX(cz) - 33, 0, cz);
     g.rotation.y = getRoadYawAt(cz);
@@ -1032,7 +1033,7 @@ export function buildAllAlexandriaLandmarks(
     pTree2.position.set(10, 0.35, -15);
 
     g.add(plaza, hall, blueFrieze, centralDrum, centralDome, centralFinial, pTree1, pTree2);
-    addLandmarkSignboard(g, 'مسجد سيدي بشر الكبير', 'سيدي بشر · ميامي', '#38BDF8', 11.5, 5.2, 15, maxAnisotropy, isNight);
+    addLandmarkSignboard(g, 'مسجد سيدي بشر الكبير', 'سيدي بشر · ١٦٠٠ م', '#38BDF8', 11.5, 5.2, 15, maxAnisotropy, isNight);
     worldGroup.add(g);
   }
 
@@ -1134,8 +1135,8 @@ export function buildAllAlexandriaLandmarks(
       }
     }
 
-    // Start Line Gantry Banner across Corniche at Mandara (0m)
-    const finishSignTex = createSignTexture('كورنيش وقصر المنتزه', 'المندرة · نقطة البداية ← بحري', '#FACC15', maxAnisotropy);
+    // Start Line Gantry Banner across Corniche at Montaza Palace (0m)
+    const finishSignTex = createSignTexture('المنتزه (قصر المنتزه)', 'نقطة البداية ← قلعة قايتباي (١٠ كم)', '#FACC15', maxAnisotropy);
     const finishBanner = new THREE.Mesh(
       new THREE.BoxGeometry(13.2, 3.4, 0.38),
       new THREE.MeshStandardMaterial({
@@ -1174,7 +1175,7 @@ export function buildAllAlexandriaLandmarks(
       finishBanner,
       finishCrossbar,
     );
-    addLandmarkSignboard(g, 'قصر وحدائق المنتزه', 'المندرة · وبعده البحر مباشرة', '#FACC15', 14.2, 5.2, 16, maxAnisotropy, isNight);
+    addLandmarkSignboard(g, 'قصر وحدائق المنتزه', '1. المنتزه · نقطة البداية', '#FACC15', 14.2, 5.2, 16, maxAnisotropy, isNight);
     worldGroup.add(g);
   }
 

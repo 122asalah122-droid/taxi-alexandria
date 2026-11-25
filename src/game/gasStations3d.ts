@@ -115,6 +115,7 @@ export function buildCornicheGasStations(
     rightExtraX?: number;
     getRightExtraX?: (z: number) => number;
     extraStations?: CornicheGasStation[];
+    stations?: CornicheGasStation[];
   },
 ): GasStationsBuildResult {
   const root = new THREE.Group();
@@ -126,9 +127,10 @@ export function buildCornicheGasStations(
   const roadHeightFn = roadFns?.getRoadHeightAt ?? getRoadHeightAt;
   const getRightExtra =
     roadFns?.getRightExtraX ?? (() => roadFns?.rightExtraX ?? 0);
+  const baseStations = roadFns?.stations ?? GAS_STATIONS;
   const allStations = roadFns?.extraStations
-    ? [...GAS_STATIONS, ...roadFns.extraStations]
-    : GAS_STATIONS;
+    ? [...baseStations, ...roadFns.extraStations]
+    : baseStations;
 
   // Shared materials for minimal GPU state switches & fast mobile rendering
   const concretePadMat = new THREE.MeshBasicMaterial({

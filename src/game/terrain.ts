@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { AlexDistrictId, RaceTrackId } from './types';
 
-export const STANLEY_BRIDGE_Z = -1200;
+export const STANLEY_BRIDGE_Z = -4400;
 export const STANLEY_HALF_LEN = 90;
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
@@ -10,25 +10,20 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
 }
 
 /**
- * Custom sequential turns ("ملفات") for Sidi Gaber -> Sidi Gaber Train Station -> Abu Qir Street -> El Mandara:
- * - Turn 1 (dist 170..340, before Library): Right (+36m) into Sidi Gaber
- * - Straight to Traffic Light #1 at dist 540 (~2 km)
- * - Turn 2 (dist 640..840): Right (+48m) into full Sidi Gaber city
- * - Turn 3 (dist 1040..1240): Left (-50m)
- * - ~5 km stretch -> Turn 4 (dist 1660..1850): Left (-48m)
- * - ~6 km stretch -> Turn 5 (dist 2200..2360): Left (-44m)
- * - ~3 km stretch -> Turn 6 (dist 2520..2670): Right (+46m) -> Sidi Gaber Train Station immediately on the RIGHT (dist 2720)
- * - Straight ~3 km -> Traffic Light #2 at dist 2960 -> straight all the way down Abu Qir Street to El Mandara (dist 3500)
+ * Smooth urban avenue curves along Sidi Gaber -> Abu Qir Street (El-Horreya Road) -> El-Mandara (8,400m):
+ * Straight launch past Sidi Gaber Train Station (0..320m), then realistic urban bends through
+ * Mostafa Kamel, Roushdy, Bolkly, Fleming, Gianaclis, Louran, Victoria, Sidi Bishr & Miami into El-Mandara (8,400m).
  */
 function getSidiGaberRoadCenterX(z: number): number {
   const dist = Math.max(0, -z);
   let x = 0;
-  x += 36 * smoothstep(170, 340, dist);   // ملف 1 قبل المكتبة (سيدي جابر)
-  x += 48 * smoothstep(640, 840, dist);   // ملف 2 يمين بعد إشارة الـ 2 كم
-  x -= 50 * smoothstep(1040, 1240, dist); // ملف 3 شمال
-  x -= 48 * smoothstep(1660, 1850, dist); // بعد 5 كم ملف شمال
-  x -= 44 * smoothstep(2200, 2360, dist); // بعد 6 كم ملف شمال
-  x += 46 * smoothstep(2520, 2670, dist); // بعد 3 كم ملف يمين ← محطة قطار سيدي جابر على اليمين
+  x += 28 * smoothstep(320, 620, dist);     // الخروج من سيدي جابر نحو مصطفى كامل
+  x += 24 * smoothstep(1180, 1520, dist);   // انحناءة رشدي وكفر عبده
+  x -= 36 * smoothstep(2180, 2560, dist);   // انحناءة بولكلي وفلمنج
+  x -= 28 * smoothstep(3400, 3780, dist);   // انحناءة جناكليس وشوتس
+  x += 34 * smoothstep(4680, 5080, dist);   // دخول لوران وفيكتوريا
+  x -= 26 * smoothstep(5960, 6380, dist);   // محور محمد نجيب ← سيدي بشر
+  x += 22 * smoothstep(7120, 7560, dist);   // استقامة ميامي والعصافرة نحو المندرة
   return x;
 }
 
@@ -52,8 +47,8 @@ function getGrandAlexandriaRoadCenterX(z: number): number {
 }
 
 /**
- * Scenic coastal Corniche curves ("ملفات") starting from El Mandara (z = 0) through Stanley Bridge (z = -1200)
- * all the way to Bahary & Qaitbay Citadel (z = -3500), plus specialized curve profiles per Race Track & District.
+ * Scenic coastal Corniche curves ("ملفات") starting from Montaza Palace (z = 0) through Stanley Bridge (z = -4400)
+ * all the way to Bahary, Anfoushi & Qaitbay Citadel (z = -10000), plus specialized curve profiles per Race Track & District.
  */
 export function getRoadCenterX(
   z: number,
@@ -68,9 +63,21 @@ export function getRoadCenterX(
   }
 
   if (z >= -80) return 0;
-  const dist = -z; // positive meters moving forward from El Mandara
-  const env1 = smoothstep(80, 260, dist) * (1 - smoothstep(900, 1070, dist));
-  const env2 = smoothstep(1330, 1540, dist) * (1 - smoothstep(3240, 3440, dist));
+  const dist = -z; // positive meters moving forward from start
+  if (!trackId && (districtId === 'anfoushi' || districtId === 'ras_el_soda_victoria' || districtId === 'abu_qir')) {
+    const longEnv = smoothstep(80, 260, dist) * (1 - smoothstep(6900, 7120, dist));
+    if (longEnv <= 0.0001) return 0;
+    const w1 = Math.sin((dist - 100) * 0.0038) * (districtId === 'anfoushi' ? 24 : 18);
+    const w2 = Math.sin((dist - 400) * 0.0019) * (districtId === 'anfoushi' ? 14 : 11);
+    return (w1 + w2) * longEnv;
+  }
+  const isLongCorniche = !trackId && (!districtId || districtId === 'corniche');
+  const env1 = isLongCorniche
+    ? smoothstep(80, 260, dist) * (1 - smoothstep(4120, 4270, dist))
+    : smoothstep(80, 260, dist) * (1 - smoothstep(900, 1070, dist));
+  const env2 = isLongCorniche
+    ? smoothstep(4530, 4720, dist) * (1 - smoothstep(9740, 9920, dist))
+    : smoothstep(1330, 1540, dist) * (1 - smoothstep(3240, 3440, dist));
   const env = env1 + env2;
 
   if (trackId === 'corniche_express') {

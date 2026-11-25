@@ -596,12 +596,27 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
     const raceFinishM = activeTrack ? activeTrack.laps * activeTrack.lapRenderM : MANDARA_FINISH_M;
 
     const isSidiGaberDistrict = activeDistrict.id === 'sidi_gaber_abuqir';
+    const isAbuQirDistrict = activeDistrict.id === 'abu_qir';
     const isGrandCity = activeDistrict.id === 'grand_alexandria';
+    const hasStanleyBridge = !isUrbanCircuitTrack && activeDistrict.id === 'corniche';
     const activeFinishM = activeDistrict.routeLengthM ?? MANDARA_FINISH_M;
-    const activeGasStations = isGrandCity ? [...GAS_STATIONS, ...GRAND_EXTRA_GAS_STATIONS] : GAS_STATIONS;
+    const activeGasStations = isGrandCity
+      ? [
+          ...GAS_STATIONS.filter((gs) => Math.abs(gs.z) <= 3500),
+          ...GRAND_EXTRA_GAS_STATIONS,
+        ]
+      : GAS_STATIONS.filter(
+          (gs) =>
+            Math.abs(gs.z) <= activeFinishM + 80 &&
+            !(isAbuQirDistrict && gs.side === 'right' && gs.z <= -4960),
+        );
     const isSideBypassAtZ = (z: number) =>
-      isSidiGaberDistrict || (isGrandCity && z <= -2380 && z >= -3660);
-    const sgCrossStreetZs = [-380, -760, -960, -1380, -1620, -1960, -2140, -2450, -2860, -3100, -3260, -3380];
+      isSidiGaberDistrict ||
+      (isAbuQirDistrict && z <= -5060 && z >= -7320) ||
+      (isGrandCity && z <= -2380 && z >= -3660);
+    const sgCrossStreetZs = [
+      -460, -960, -1680, -2420, -3100, -3780, -4500, -5220, -5920, -6620, -7320, -8020,
+    ];
 
     // Post-Stanley Return-Side Flyover Bridge ("كوبري الكورنيش اليمين — الجنب الراجع") descending back onto the Corniche
     // followed immediately by the Sidi Gaber Right-Turn Exit ("ملف يمين • اتجاه سيدي جابر") on the -X city side (RIGHT when returning toward +Z!)
@@ -617,12 +632,12 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
           turnCenterZ: -525,
         }
       : {
-          bridgeStartZ: -1082,
-          bridgeEndZ: -870,
+          bridgeStartZ: STANLEY_BRIDGE_Z + 118,
+          bridgeEndZ: STANLEY_BRIDGE_Z + 330,
           bridgePeak: 5.6,
-          turnStartZ: -854,
-          turnEndZ: -766,
-          turnCenterZ: -810,
+          turnStartZ: STANLEY_BRIDGE_Z + 346,
+          turnEndZ: STANLEY_BRIDGE_Z + 434,
+          turnCenterZ: STANLEY_BRIDGE_Z + 390,
         };
     const isOnRightBridgeSpan = (z: number) =>
       hasPostStanleyRightBridge && z >= rightBridgeCfg.bridgeStartZ && z <= rightBridgeCfg.bridgeEndZ;
@@ -916,7 +931,8 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
     }
 
     const Z_START = 160;
-    const Z_END = isGrandCity ? -6240 : -3840;
+    const routeEndM = isRaceMode ? Math.max(raceFinishM, 3500) : activeFinishM;
+    const Z_END = isGrandCity ? -6240 : -(routeEndM + 340);
     const ROUTE_SPAN = Z_START - Z_END;
     const ROUTE_MID_Z = (Z_START + Z_END) / 2;
 
@@ -1016,11 +1032,15 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
 
     // Mediterranean Sea strictly OUTSIDE the Corniche seawall (x >= roadCenterX + 15.2) with tight curve tracking so zero sea ever touches the black road or sidewalks!
     const seaWidth = 510;
+    const seaZSegs = Math.min(
+      isMobileDevice ? 480 : 720,
+      Math.max(220, Math.round(ROUTE_SPAN / (isMobileDevice ? 20 : 14))),
+    );
     const seaGeo = new THREE.PlaneGeometry(
       seaWidth,
       ROUTE_SPAN + 260,
       isMobileDevice ? 24 : 72,
-      isMobileDevice ? 220 : 320,
+      seaZSegs,
     );
     const seaPosAttr = seaGeo.attributes.position;
     for (let i = 0; i < seaPosAttr.count; i++) {
@@ -1175,7 +1195,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       (z) =>
         isUrbanCircuitTrack
           ? getRoadHeightAt(z) + 0.02
-          : Math.abs(z - STANLEY_BRIDGE_Z) < 88
+          : hasStanleyBridge && Math.abs(z - STANLEY_BRIDGE_Z) < 88
             ? -1.5
             : 0.02,
       1,
@@ -1234,7 +1254,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       fog: false,
     });
 
-    const roadSegments = isUrbanCircuitTrack
+    const roadSegments = !hasStanleyBridge
       ? [{ zStart: Z_START, zEnd: Z_END }]
       : [
           { zStart: Z_START, zEnd: STANLEY_BRIDGE_Z + 86 },
@@ -1396,7 +1416,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
         new THREE.Mesh(cityCurbTopGeo, yellowBlackCurbMat),
         new THREE.Mesh(cityCurbDropGeo, yellowBlackCurbMat),
       );
-      if (!isSidiGaberDistrict && !isGrandCity) {
+      if (!isSidiGaberDistrict && !isGrandCity && !isAbuQirDistrict) {
         scene.add(
           promMesh,
           new THREE.Mesh(promCurbTopGeo, yellowBlackCurbMat),
@@ -2129,7 +2149,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       if (
         !isSideBypassAtZ(pz) &&
         (isUrbanCircuitTrack ||
-          (Math.abs(pz - STANLEY_BRIDGE_Z) >= 92 &&
+          ((!hasStanleyBridge || Math.abs(pz - STANLEY_BRIDGE_Z) >= 92) &&
             !activeGasStations.some((gs) => gs.side === 'right' && Math.abs(pz - gs.z) < 20)))
       ) {
         treeEntries.push({
@@ -2145,7 +2165,8 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       if (
         ti % 2 === 0 &&
         (isUrbanCircuitTrack ||
-          (Math.abs(pz - STANLEY_BRIDGE_Z) >= 96 && !activeUTurnZones.some((ut) => Math.abs(pz - 8 - ut.z) < 17)))
+          ((!hasStanleyBridge || Math.abs(pz - STANLEY_BRIDGE_Z) >= 96) &&
+            !activeUTurnZones.some((ut) => Math.abs(pz - 8 - ut.z) < 17)))
       ) {
         const leafKinds: ('ficus' | 'poinciana' | 'olive')[] = ['ficus', 'poinciana', 'olive'];
         treeEntries.push({
@@ -2316,7 +2337,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       if (
         !isSideBypassAtZ(lz) &&
         (isUrbanCircuitTrack ||
-          (Math.abs(lz - STANLEY_BRIDGE_Z) >= 92 &&
+          ((!hasStanleyBridge || Math.abs(lz - STANLEY_BRIDGE_Z) >= 92) &&
             !activeGasStations.some((gs) => gs.side === 'right' && Math.abs(lz - gs.z) < 20)))
       ) {
         promLampEntries.push({
@@ -2513,7 +2534,45 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
 
       // Buildings stand on the LEFT (-X, South/City) side opposite the Sea and Montaza Palace
       const nearLeftLandmark = activeLandmarks.some((lm) => {
-        if (lm.id === 'qaitbay' || lm.id === 'mandara') return false;
+        if (activeDistrict.id === 'corniche') {
+          if (lm.id === 'stanley') return Math.abs(-lm.distanceM - bz) < 92;
+          if (
+            lm.id === 'sidi_bishr' ||
+            lm.id === 'shatby' ||
+            lm.id === 'raml' ||
+            lm.id === 'mansheya' ||
+            lm.id === 'bahary'
+          ) {
+            return Math.abs(-lm.distanceM - bz) < 48;
+          }
+          return false;
+        }
+        if (activeDistrict.id === 'anfoushi') {
+          if (
+            lm.id === 'an_ras_eltin_palace' ||
+            lm.id === 'an_ras_eltin_hospital' ||
+            lm.id === 'an_mosques_square' ||
+            lm.id === 'an_sayala_bahary' ||
+            lm.id === 'an_halqa_harbor'
+          ) {
+            return Math.abs(-lm.distanceM - bz) < 44;
+          }
+          return false;
+        }
+        if (activeDistrict.id === 'ras_el_soda_victoria') {
+          if (lm.id === 'rv_bakos' || lm.id === 'rv_victoria_college') {
+            return Math.abs(-lm.distanceM - bz) < 42;
+          }
+          return false;
+        }
+        if (activeDistrict.id === 'sidi_gaber_abuqir') {
+          return false;
+        }
+        if (activeDistrict.id === 'abu_qir') {
+          // Left side hosts Naval College (z=-5400) & Heart of Abu Qir El-Balad (-5850..-7260) opposite the Abu Waad Beaches branch road!
+          return bz <= -5240;
+        }
+        if (lm.id === 'qaitbay' || lm.id === 'mandara' || lm.id === 'montaza') return false;
         if (lm.id === 'stanley') return Math.abs(-lm.distanceM - bz) < 92;
         return Math.abs(-lm.distanceM - bz) < 48;
       });
@@ -2873,7 +2932,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
     const staticPedStep = isMobileDevice ? 56 : 28;
     for (let pz = 25, ci = 0; pz >= Z_END + 140; pz -= staticPedStep, ci++) {
       const roadX = getRoadCenterX(pz);
-      if (isUrbanCircuitTrack || Math.abs(pz - STANLEY_BRIDGE_Z) >= 92) {
+      if (!hasStanleyBridge || Math.abs(pz - STANLEY_BRIDGE_Z) >= 92) {
         const groupSize = isMobileDevice ? 1 : 2 + (ci % 2);
         for (let k = 0; k < groupSize; k++) {
           staticPeople.push({
@@ -3040,10 +3099,18 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
     crosswalkGeo.rotateX(-Math.PI / 2);
 
     const signalZones = isSidiGaberDistrict
-      ? [-540, -1500, -2960]
+      ? [-640, -1400, -2340, -3260, -4180, -4900, -5920, -7000, -7920]
       : isGrandCity
         ? [-520, -1680, -2680, -3420, -4320, -5360]
-        : [-480, -1040, -1580, -2060, -2680, -3220];
+        : activeDistrict.id === 'corniche' && !isRaceMode
+          ? [-600, -1480, -2300, -3100, -3820, -5080, -5860, -6540, -7480, -8260, -9020, -9620]
+          : activeDistrict.id === 'anfoushi' && !isRaceMode
+            ? [-620, -1460, -2380, -3260, -4180, -5060, -5980, -6820]
+            : activeDistrict.id === 'ras_el_soda_victoria' && !isRaceMode
+              ? [-580, -1400, -2200, -3000, -3800, -4600, -5400, -6600]
+              : activeDistrict.id === 'abu_qir' && !isRaceMode
+                ? [-620, -1480, -2360, -3260, -4180, -5020, -6040, -6860]
+                : [-480, -1040, -1580, -2060, -2680, -3220];
     const signals: SignalIntersection[] = signalZones.map((sz, idx) => {
       const roadX = getRoadCenterX(sz);
       const yaw = getRoadYawAt(sz);
@@ -3121,7 +3188,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
           getRoadYawAt,
           getRoadHeightAt,
           getRightExtraX: (z) => (isSideBypassAtZ(z) ? 6.6 : 0),
-          extraStations: isGrandCity ? GRAND_EXTRA_GAS_STATIONS : undefined,
+          stations: activeGasStations,
         })
       : null;
     if (gasStationsBuilt) {
@@ -3491,7 +3558,10 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
     // Mashrou3 Microbus Stops (7 stops along Bahary -> Mandara loading up to 14 riders!)
     const mashrou3Stops: Mashrou3Stop[] = [];
     if (mode === 'mashrou3') {
-      const stopZs = [-140, -540, -1000, -1480, -1980, -2640, -3240];
+      const stopZs =
+        activeFinishM >= 8000
+          ? [-360, -1240, -2200, -3200, -4080, -5160, -6240, -7400, -8560, -9520]
+          : [-140, -540, -1000, -1480, -1980, -2640, -3240];
       stopZs.forEach((sz, idx) => {
         const stopGroup = new THREE.Group();
         const r = new THREE.Mesh(
@@ -3719,12 +3789,20 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
             : isRaceMode && activeTrack
               ? `${activeTrack.name} (${activeTrack.laps} لفات · ${activeTrack.distanceKm} كم) — استعد للانطلاق!`
               : mode === 'mashrou3'
-                ? 'ميكروباص مشروع: حمّل ١٤ راكب من المواقف من المندرة والمنتزه لحد بحري!'
+                ? 'ميكروباص مشروع: حمّل ١٤ راكب من المواقف من المنتزه لحد قلعة قايتباي!'
                 : mode === 'police_patrol'
                   ? 'دورية الشرطة: شغّل السارينة ووقف العربيات المخالفة بطلب الرخص!'
                   : effectiveVehicleKind === 'black_supermoto' || effectiveVehicleKind === 'vespa'
                     ? `${activeMotoModel.name} (مستوى ${activeMotoModel.level}/7): هدّي جنب الزباين عشان يركبوا وراك، واستخدم ملفات الدوران للرجوع!`
-                    : 'يا مسهل! انطلق من بوابة المندرة والمنتزه حتى قلعة قايتباي ببحري.' as string | null,
+                    : activeDistrict.id === 'anfoushi'
+                      ? 'يا مسهل! انطلق من قصر رأس التين بطول ساحل الأنفوشي وبحري حتى حلقة السمك وميناء الصيادين.'
+                      : activeDistrict.id === 'ras_el_soda_victoria'
+                        ? 'يا مسهل! انطلق على طريق الرأس السوداء وشارع مصطفى كامل حتى ميدان ومحطة ترام فيكتوريا (٧.٢ كم).'
+                        : activeDistrict.id === 'sidi_gaber_abuqir'
+                          ? 'يا مسهل! انطلق من سيدي جابر على شارع أبو قير (طريق الحرية) بطول ١٣ منطقة حتى المندرة (٨.٤ كم).'
+                          : activeDistrict.id === 'abu_qir'
+                            ? 'يا مسهل! انطلق من المندرة لأبو قير البلد (٧.٢ كم) — ومن عند يفطة أبو وعد ادخل الشارع الفرعي للشواطئ ↗!'
+                            : 'يا مسهل! انطلق من المنتزه (قصر المنتزه) بطول ٢٦ منطقة حتى قلعة قايتباي (رأس التين).' as string | null,
       toastTimer: 4.5,
       ended: false,
       hudAccum: 0,
@@ -4367,8 +4445,8 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       const dir = sim.travelDir;
 
       let spawnZ = sim.z + dir * (92 + Math.random() * 48);
-      spawnZ = THREE.MathUtils.clamp(spawnZ, -3410, -50);
-      if (Math.abs(spawnZ - STANLEY_BRIDGE_Z) < 98) {
+      spawnZ = THREE.MathUtils.clamp(spawnZ, -(activeFinishM - 90), -50);
+      if (hasStanleyBridge && Math.abs(spawnZ - STANLEY_BRIDGE_Z) < 98) {
         spawnZ = STANLEY_BRIDGE_Z + (dir === -1 ? -115 : 115);
       }
       for (const sz of signalZones) {
@@ -4376,34 +4454,42 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       }
       const pickupDistM = Math.max(0, -spawnZ);
 
-      const upcoming =
+      const maxTripSpanM = activeFinishM >= 6500 ? 2800 : activeFinishM;
+      const upcomingAll =
         dir === -1
-          ? activeLandmarks.filter((lm) => lm.distanceM > pickupDistM + 230)
-          : activeLandmarks.filter((lm) => lm.distanceM < pickupDistM - 230);
-      const opposite =
-        dir === -1
-          ? activeLandmarks.filter((lm) => lm.distanceM < pickupDistM - 220)
-          : activeLandmarks.filter((lm) => lm.distanceM > pickupDistM + 220);
+          ? activeLandmarks.filter((lm) => lm.distanceM > pickupDistM + 260)
+          : activeLandmarks.filter((lm) => lm.distanceM < pickupDistM - 260);
+      const upcomingNear = upcomingAll.filter(
+        (lm) => Math.abs(lm.distanceM - pickupDistM) <= maxTripSpanM,
+      );
+      const upcoming = upcomingNear.length > 0 ? upcomingNear : upcomingAll;
 
-      // True bi-directional "رايح جاي" riders: ~45% ask for a destination in the OPPOSITE direction
+      const oppositeAll =
+        dir === -1
+          ? activeLandmarks.filter((lm) => lm.distanceM < pickupDistM - 260)
+          : activeLandmarks.filter((lm) => lm.distanceM > pickupDistM + 260);
+      const oppositeNear = oppositeAll.filter(
+        (lm) => Math.abs(lm.distanceM - pickupDistM) <= maxTripSpanM,
+      );
+      const opposite = oppositeNear.length > 0 ? oppositeNear : oppositeAll;
+
+      // True bi-directional "رايح جاي" riders: ~42% ask for a destination in the OPPOSITE direction
       const wantsOppositeDir =
-        opposite.length > 0 && (upcoming.length === 0 || Math.random() < 0.45);
+        opposite.length > 0 && (upcoming.length === 0 || Math.random() < 0.42);
 
       let dest = activeLandmarks[1] ?? activeLandmarks[0];
       if (wantsOppositeDir) {
-        if (dir === -1) {
-          const eastFavorites = opposite.filter(
-            (lm) => lm.id === 'asafra' || lm.id === 'sidi_bishr' || lm.id === 'mandara',
-          );
-          const pool = eastFavorites.length > 0 && Math.random() < 0.72 ? eastFavorites : opposite;
-          dest = pool[Math.floor(Math.random() * pool.length)];
-        } else {
-          const pool = opposite.slice(0, Math.min(4, opposite.length));
-          dest = pool[Math.floor(Math.random() * pool.length)];
-        }
+        const pool =
+          dir === -1
+            ? opposite.slice(Math.max(0, opposite.length - 5))
+            : opposite.slice(0, Math.min(5, opposite.length));
+        dest = pool[Math.floor(Math.random() * pool.length)];
       } else if (upcoming.length > 0) {
-        const maxPool = Math.min(upcoming.length, motoLevelFactor >= 0.5 ? 5 : 3);
-        dest = upcoming[Math.floor(Math.random() * maxPool)];
+        const pool =
+          dir === -1
+            ? upcoming.slice(0, Math.min(upcoming.length, motoLevelFactor >= 0.5 ? 6 : 4))
+            : upcoming.slice(Math.max(0, upcoming.length - (motoLevelFactor >= 0.5 ? 6 : 4)));
+        dest = pool[Math.floor(Math.random() * pool.length)];
       } else {
         dest = dir === -1 ? activeLandmarks[activeLandmarks.length - 1] : activeLandmarks[0];
       }
@@ -4890,7 +4976,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
         for (let i = 0; i < SPRAY_PLUME_COUNT; i++) {
           const sp = spraySpecs[i];
           const sz = sim.z + sp.zRel;
-          if (sz > -90 || sz < Z_END + 30 || Math.abs(sz - STANLEY_BRIDGE_Z) < 88) {
+          if (sz > -90 || sz < Z_END + 30 || (hasStanleyBridge && Math.abs(sz - STANLEY_BRIDGE_Z) < 88)) {
             _dummy.position.set(0, -40, sz);
             _dummy.scale.set(0.001, 0.001, 0.001);
             _dummy.rotation.set(0, 0, 0);
@@ -5982,7 +6068,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
           syncHud();
           return;
         }
-        if (gapM > 215 || sim.z < -MANDARA_FINISH_M) {
+        if (gapM > 215 || sim.z < -activeFinishM) {
           sim.checkpointProcessed += 1;
           soundFX.playHorn();
           showToast(`الهارب (${ct.plate}) فلت! راجع للكمين لاستكمال الوردية`, 3.2);
@@ -6160,7 +6246,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
           return;
         }
       } else if (!isCheckpointMode) {
-        if (!sim.reachedStanley && distM >= Math.abs(STANLEY_BRIDGE_Z)) {
+        if (hasStanleyBridge && !sim.reachedStanley && distM >= Math.abs(STANLEY_BRIDGE_Z)) {
           sim.reachedStanley = true;
           const stBonus = Math.round(45 * fareMultiplier);
           sim.earnings += stBonus;
@@ -6169,14 +6255,24 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
           soundFX.playDropoff();
           showToast(`أهلاً بك على كوبري ستانلي الملوّن! (+${pts} نقطة · +${stBonus} ج.م)`, 4.0);
         }
-        if (!isMotoDeliveryMode && !sim.reachedMandara && distM >= MANDARA_FINISH_M) {
+        if (!isMotoDeliveryMode && !sim.reachedMandara && distM >= activeFinishM) {
           sim.reachedMandara = true;
           sim.earnings += 110;
           onInstantEarnRef.current?.(110, false);
           const pts = addPoints(450);
           soundFX.playDropoff();
           syncHud();
-          finishRun(`ألف مبروك! انطلقت من المندرة ووصلت قلعة قايتباي ببحري بنجاح (+${pts} نقطة)`);
+          finishRun(
+            activeDistrict.id === 'anfoushi'
+              ? `ألف مبروك! انطلقت من قصر رأس التين ووصلت حلقة السمك وميناء الصيادين ببحري بنجاح (+${pts} نقطة)`
+              : activeDistrict.id === 'ras_el_soda_victoria'
+                ? `ألف مبروك! انطلقت من الرأس السوداء ووصلت ميدان ومحطة ترام فيكتوريا بنجاح (+${pts} نقطة)`
+                : activeDistrict.id === 'sidi_gaber_abuqir'
+                  ? `ألف مبروك! انطلقت من سيدي جابر بطول شارع أبو قير ووصلت المندرة بنجاح (+${pts} نقطة)`
+                  : activeDistrict.id === 'abu_qir'
+                    ? `ألف مبروك! انطلقت من المندرة ومريت بيفطة أبو وعد وشارع الشواطئ ووصلت أبو قير البلد بنجاح (+${pts} نقطة)`
+                    : `ألف مبروك! انطلقت من قصر المنتزه ووصلت قلعة قايتباي (رأس التين) بنجاح (+${pts} نقطة)`,
+          );
           return;
         }
       }
