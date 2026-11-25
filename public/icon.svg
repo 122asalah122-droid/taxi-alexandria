@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0B1426" />
+      <stop offset="100%" stop-color="#1E3556" />
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="40%" r="40%">
+      <stop offset="0%" stop-color="#FDE047" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#FACC15" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="512" height="318" fill="url(#sky)" />
+  <circle cx="256" cy="204" r="140" fill="url(#sun)" />
+  <rect y="318" width="512" height="62" fill="#0E6BA8" />
+  <rect y="380" width="512" height="132" fill="#0B0D10" />
+  <rect x="76" y="434" width="96" height="16" rx="4" fill="#FFFFFF" />
+  <rect x="208" y="434" width="96" height="16" rx="4" fill="#FFFFFF" />
+  <rect x="340" y="434" width="96" height="16" rx="4" fill="#FFFFFF" />
+  <!-- Roof TAXI sign -->
+  <rect x="206" y="144" width="100" height="36" rx="10" fill="#FACC15" />
+  <rect x="224" y="155" width="64" height="14" rx="4" fill="#0F172A" />
+  <!-- Taxi cabin -->
+  <rect x="136" y="176" width="240" height="92" rx="30" fill="#FACC15" />
+  <rect x="160" y="192" width="192" height="58" rx="14" fill="#0F172A" />
+  <!-- Taxi body -->
+  <rect x="94" y="252" width="324" height="106" rx="26" fill="#0E121A" />
+  <rect x="94" y="252" width="324" height="44" rx="22" fill="#FACC15" />
+  <!-- Headlights & grille -->
+  <rect x="118" y="302" width="56" height="26" rx="8" fill="#FFFBEB" />
+  <rect x="338" y="302" width="56" height="26" rx="8" fill="#FFFBEB" />
+  <rect x="198" y="304" width="116" height="24" rx="6" fill="#94A3B8" />
+  <!-- Wheels -->
+  <rect x="114" y="346" width="54" height="40" rx="12" fill="#05070A" />
+  <rect x="344" y="346" width="54" height="40" rx="12" fill="#05070A" />
+</svg>

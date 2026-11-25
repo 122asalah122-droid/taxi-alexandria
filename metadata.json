@@ -1,0 +1,6 @@
+{
+  "name": "تكس الإسكندرية — تاكسي الكورنيش",
+  "description": "لعبة قيادة تاكسي الإسكندرية الأصفر على الكورنيش — وصّل الزباين بين قلعة قايتباي وكوبري ستانلي والمنتزه، تفادَ الزحام والترام، وطوّر سيارتك.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
