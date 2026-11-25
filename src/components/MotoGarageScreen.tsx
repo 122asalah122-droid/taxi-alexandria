@@ -72,6 +72,8 @@ type GarageTab = 'models' | 'lights' | 'paint' | 'exhaust' | 'bling' | 'sound';
 
 interface MotoGarageScreenProps {
   progress: PlayerProgress;
+  atmosphere: AtmosphereMode;
+  onChangeAtmosphere: (mode: AtmosphereMode) => void;
   onSaveTuning: (nextTuning: MotoTuningConfig, newlyPurchasedKeys?: string[], totalCost?: number) => void;
   onSelectMoto: (motoId: RaceBikeId) => void;
   onBuyMoto: (motoId: RaceBikeId, price: number) => void;
@@ -91,6 +93,8 @@ const GARAGE_TABS: { id: GarageTab; label: string; Icon: React.FC<{ className?: 
 
 export const MotoGarageScreen: React.FC<MotoGarageScreenProps> = ({
   progress,
+  atmosphere,
+  onChangeAtmosphere,
   onSaveTuning,
   onSelectMoto,
   onBuyMoto,
@@ -112,7 +116,6 @@ export const MotoGarageScreen: React.FC<MotoGarageScreenProps> = ({
   }));
   const [activeTab, setActiveTab] = useState<GarageTab>('models');
   const [dockOpen, setDockOpen] = useState(true);
-  const [previewTime, setPreviewTime] = useState<AtmosphereMode>('night');
   const [userDragged, setUserDragged] = useState(false);
   const [isRevving, setIsRevving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -120,7 +123,7 @@ export const MotoGarageScreen: React.FC<MotoGarageScreenProps> = ({
 
   const mountRef = useRef<HTMLDivElement | null>(null);
   const tuningRef = useRef<MotoTuningConfig>(previewTuning);
-  const timeModeRef = useRef<AtmosphereMode>(previewTime);
+  const timeModeRef = useRef<AtmosphereMode>(atmosphere);
   const rigRef = useRef<PlayerVehicleRig | null>(null);
   const rebuildBikeRef = useRef<((chassis: MotoChassisType, tuning: MotoTuningConfig) => void) | null>(null);
   const applyAtmoRef = useRef<((mode: AtmosphereMode) => void) | null>(null);
@@ -174,15 +177,11 @@ export const MotoGarageScreen: React.FC<MotoGarageScreenProps> = ({
     });
   };
 
-  // Sync Day / Sunset / Night atmosphere instantly in the 3D scene
+  // Sync Day / Sunset / Night atmosphere instantly in BOTH the 3D garage & the driving game
   useEffect(() => {
-    timeModeRef.current = previewTime;
-    applyAtmoRef.current?.(previewTime);
-  }, [previewTime]);
-
-  const handleCycleAtmosphere = () => {
-    setPreviewTime((prev) => (prev === 'night' ? 'day' : prev === 'day' ? 'sunset' : 'night'));
-  };
+    timeModeRef.current = atmosphere;
+    applyAtmoRef.current?.(atmosphere);
+  }, [atmosphere]);
 
   const handleRevEngine = () => {
     soundFX.playRevBurst(
@@ -644,47 +643,47 @@ export const MotoGarageScreen: React.FC<MotoGarageScreenProps> = ({
       skyMat = nextSkyMat;
 
       if (mode === 'night') {
-        scene.fog = new THREE.FogExp2(0x141416, 0.0085);
-        hemiLight.color.setHex(0x3a3a3c);
-        hemiLight.groundColor.setHex(0x22201e);
-        hemiLight.intensity = 0.58;
-        keyLight.color.setHex(0xe5e5e3);
-        keyLight.intensity = 1.25;
+        scene.fog = new THREE.FogExp2(0x09101f, 0.0078);
+        hemiLight.color.setHex(0x4a5f82);
+        hemiLight.groundColor.setHex(0x1b1d24);
+        hemiLight.intensity = 0.62;
+        keyLight.color.setHex(0xdbeafe);
+        keyLight.intensity = 1.15;
         keyLight.position.set(5, 11, 7);
-        rimLight.color.setHex(0xd6d3cd);
-        rimLight.intensity = 0.55;
-        seaMat.color.setHex(0x0b357a);
-        renderer.toneMappingExposure = 1.15;
-        lampLights.forEach((l) => (l.intensity = 6.2));
-        lampBulbMats.forEach((m) => (m.emissiveIntensity = 3.2));
-      } else if (mode === 'sunset') {
-        scene.fog = new THREE.FogExp2(0xc98a6b, 0.0065);
-        hemiLight.color.setHex(0xf5d6bc);
-        hemiLight.groundColor.setHex(0x7a5c46);
-        hemiLight.intensity = 0.85;
-        keyLight.color.setHex(0xffb56b);
-        keyLight.intensity = 2.4;
-        keyLight.position.set(-10, 6.5, -5);
-        rimLight.color.setHex(0xfdba74);
+        rimLight.color.setHex(0x93c5fd);
         rimLight.intensity = 0.65;
+        seaMat.color.setHex(0x0b357a);
+        renderer.toneMappingExposure = 1.12;
+        lampLights.forEach((l) => (l.intensity = 7.5));
+        lampBulbMats.forEach((m) => (m.emissiveIntensity = 3.6));
+      } else if (mode === 'sunset') {
+        scene.fog = new THREE.FogExp2(0xd98055, 0.0062);
+        hemiLight.color.setHex(0xfbd3a8);
+        hemiLight.groundColor.setHex(0x7c4b34);
+        hemiLight.intensity = 0.92;
+        keyLight.color.setHex(0xff9e4d);
+        keyLight.intensity = 2.55;
+        keyLight.position.set(-10, 6.2, -5);
+        rimLight.color.setHex(0xfb923c);
+        rimLight.intensity = 0.85;
         seaMat.color.setHex(0x144ea8);
         renderer.toneMappingExposure = 1.12;
-        lampLights.forEach((l) => (l.intensity = 3.2));
-        lampBulbMats.forEach((m) => (m.emissiveIntensity = 2.0));
+        lampLights.forEach((l) => (l.intensity = 3.4));
+        lampBulbMats.forEach((m) => (m.emissiveIntensity = 2.1));
       } else {
-        scene.fog = new THREE.FogExp2(0xdcdad5, 0.0042);
-        hemiLight.color.setHex(0xfaf8f2);
-        hemiLight.groundColor.setHex(0x6e6961);
-        hemiLight.intensity = 1.0;
-        keyLight.color.setHex(0xfff8eb);
-        keyLight.intensity = 2.55;
-        keyLight.position.set(8, 14, 9);
-        rimLight.color.setHex(0xfff4e0);
-        rimLight.intensity = 0.45;
+        scene.fog = new THREE.FogExp2(0xcfe8fb, 0.0034);
+        hemiLight.color.setHex(0xffffff);
+        hemiLight.groundColor.setHex(0x78736b);
+        hemiLight.intensity = 1.12;
+        keyLight.color.setHex(0xfffdf5);
+        keyLight.intensity = 2.65;
+        keyLight.position.set(8, 15, 9);
+        rimLight.color.setHex(0xfff9eb);
+        rimLight.intensity = 0.55;
         seaMat.color.setHex(0x1565d8);
-        renderer.toneMappingExposure = 1.06;
+        renderer.toneMappingExposure = 1.08;
         lampLights.forEach((l) => (l.intensity = 0.0));
-        lampBulbMats.forEach((m) => (m.emissiveIntensity = 0.15));
+        lampBulbMats.forEach((m) => (m.emissiveIntensity = 0.1));
       }
     };
     applyAtmoRef.current = applyAtmosphere;
@@ -1021,30 +1020,45 @@ export const MotoGarageScreen: React.FC<MotoGarageScreenProps> = ({
           {/* Sea Sound On/Off Toggle */}
           <SeaSoundButton />
 
-          {/* Day / Sunset / Night Preview Button */}
-          <button
-            type="button"
-            onClick={handleCycleAtmosphere}
-            title="تبديل إضاءة النهار والليل"
-            className="min-h-[44px] px-3 rounded-xl bg-[#0B111E]/95 hover:bg-[#162136] border border-white/20 text-amber-300 font-extrabold text-xs flex items-center gap-1.5 whitespace-nowrap shrink-0"
-          >
-            {previewTime === 'night' ? (
-              <>
-                <Moon className="w-4 h-4 text-sky-300" />
-                <span className="hidden sm:inline text-white">ليل</span>
-              </>
-            ) : previewTime === 'sunset' ? (
-              <>
-                <Sunset className="w-4 h-4 text-orange-400" />
-                <span className="hidden sm:inline text-white">غروب</span>
-              </>
-            ) : (
-              <>
-                <Sun className="w-4 h-4 text-amber-300" />
-                <span className="hidden sm:inline text-white">نهار</span>
-              </>
-            )}
-          </button>
+          {/* Day / Sunset / Night 3-Way Switcher (syncs live with 3D garage & motorcycle road!) */}
+          <div className="flex rounded-xl bg-[#0B111E]/95 border border-white/20 p-1 gap-0.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => onChangeAtmosphere('day')}
+              className={`min-h-[36px] px-2.5 rounded-lg text-xs font-black flex items-center gap-1 whitespace-nowrap transition-colors ${
+                atmosphere === 'day'
+                  ? 'bg-sky-400 text-slate-950'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Sun className="w-3.5 h-3.5" />
+              <span>نهار</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeAtmosphere('sunset')}
+              className={`min-h-[36px] px-2.5 rounded-lg text-xs font-black flex items-center gap-1 whitespace-nowrap transition-colors ${
+                atmosphere === 'sunset'
+                  ? 'bg-orange-400 text-slate-950'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Sunset className="w-3.5 h-3.5" />
+              <span>غروب</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeAtmosphere('night')}
+              className={`min-h-[36px] px-2.5 rounded-lg text-xs font-black flex items-center gap-1 whitespace-nowrap transition-colors ${
+                atmosphere === 'night'
+                  ? 'bg-indigo-400 text-slate-950'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Moon className="w-3.5 h-3.5" />
+              <span>ليل</span>
+            </button>
+          </div>
 
           {/* Rev Engine & Gears Test Button */}
           <button

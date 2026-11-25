@@ -789,10 +789,10 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
     const extraTexturesToDispose: THREE.Texture[] = [];
     const fogColor =
       atmosphere === 'night'
-        ? 0x121214
+        ? 0x0b1322
         : atmosphere === 'sunset'
-          ? 0xd99672
-          : 0xdcdad5;
+          ? 0xd88e66
+          : 0xd6eaf8;
     scene.background = new THREE.Color(fogColor);
     const isMobileLandscapeNow = isMobileDevice && width > height;
     scene.fog = new THREE.FogExp2(
@@ -2463,21 +2463,21 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       }
     }
 
-    // 6. Colorful Varied Buildings + Illuminated Apartment Windows & Open Shops
+    // 6. Harmonized Authentic Alexandria Mediterranean Heritage Buildings (Limestone, Cream, Ochre & Sandstone)
     const facadeVariants = [0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4];
     const facadeTextures = [
-      createAlexBuildingFacadeTexture('#E28562', '#7C2D12', '#FFF5EB', 0, maxAniso),
-      createAlexBuildingFacadeTexture('#86CFBA', '#0F766E', '#F8FAFC', 1, maxAniso),
-      createAlexBuildingFacadeTexture('#F3C44F', '#1E3A5F', '#FFFBEB', 2, maxAniso),
-      createAlexBuildingFacadeTexture('#7CBCE8', '#1E40AF', '#F8FAFC', 3, maxAniso),
-      createAlexBuildingFacadeTexture('#F09B8D', '#9F1239', '#FFF1F2', 4, maxAniso),
-      createAlexBuildingFacadeTexture('#A3D49C', '#065F46', '#F7FEE7', 5, maxAniso),
-      createAlexBuildingFacadeTexture('#B8B2E8', '#4C1D95', '#F5F3FF', 6, maxAniso),
-      createAlexBuildingFacadeTexture('#F5B06B', '#9A3412', '#FFF7ED', 0, maxAniso),
-      createAlexBuildingFacadeTexture('#7AD3E0', '#0E7490', '#ECFEFF', 1, maxAniso),
-      createAlexBuildingFacadeTexture('#E89EB8', '#831843', '#FDF2F8', 2, maxAniso),
-      createAlexBuildingFacadeTexture('#F2DFB6', '#78350F', '#FFFDF7', 3, maxAniso),
-      createAlexBuildingFacadeTexture('#D97E6B', '#450A0A', '#FEF2F2', 4, maxAniso),
+      createAlexBuildingFacadeTexture('#EDE3D2', '#2B4A5E', '#FAF6EE', 0, maxAniso),
+      createAlexBuildingFacadeTexture('#E2D1B3', '#2F5446', '#F8F4EC', 1, maxAniso),
+      createAlexBuildingFacadeTexture('#F1ECE1', '#3B4C5E', '#FFFFFF', 2, maxAniso),
+      createAlexBuildingFacadeTexture('#D9C09A', '#5C3D28', '#FBF6EC', 3, maxAniso),
+      createAlexBuildingFacadeTexture('#D8B59C', '#4A352A', '#FAF3EC', 4, maxAniso),
+      createAlexBuildingFacadeTexture('#E6DEC8', '#2E5245', '#F7F5EE', 5, maxAniso),
+      createAlexBuildingFacadeTexture('#D2D4CE', '#2A4359', '#F5F7F8', 6, maxAniso),
+      createAlexBuildingFacadeTexture('#DFC7A3', '#66432B', '#FCF7EE', 0, maxAniso),
+      createAlexBuildingFacadeTexture('#E8DFCE', '#325163', '#FAF8F2', 1, maxAniso),
+      createAlexBuildingFacadeTexture('#D6B898', '#4F3626', '#FBF4EA', 2, maxAniso),
+      createAlexBuildingFacadeTexture('#EFE7D6', '#334E42', '#FFFDF8', 3, maxAniso),
+      createAlexBuildingFacadeTexture('#CEB497', '#3D312B', '#F8F2EA', 4, maxAniso),
     ];
     const windowGlowTextures = facadeVariants.map((variant) =>
       createAlexBuildingWindowGlowTexture(variant, maxAniso),
@@ -3671,8 +3671,8 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       pitch: 0,
       noseDive: 0,
       noseDiveVel: 0,
-      speedKmh: isCheckpointMode || isRaceMode ? 0 : 18,
-      topSpeedKmh: isCheckpointMode || isRaceMode ? 0 : 18,
+      speedKmh: isCheckpointMode || isRaceMode ? 0 : 28,
+      topSpeedKmh: isCheckpointMode || isRaceMode ? 0 : 28,
       gear: isCheckpointMode || isRaceMode ? 1 : 1,
       rpm: isRaceMode ? 2200 : 2800,
       rpmRatio: isRaceMode ? 0.18 : 0.22,
@@ -5473,9 +5473,9 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
       // Grounded model-scaled acceleration that climbs dramatically across the 7 Moto & 7 Taxi levels!
       const baseAccel = isMotoDrivingMode
         ? 26 + progress.upgrades.engine * 2.5 + activeMotoModel.accelBonus
-        : 28 +
+        : 38 +
           activeTaxiLevel.accelBonus +
-          progress.upgrades.engine * 2.5 +
+          progress.upgrades.engine * 3.0 +
           (effectiveVehicleKind === 'police_car' ? 14 : 0) +
           (activeRaceBike?.accelBonus ?? 0);
       const accel = baseAccel * (sim.turboActive ? 1.58 : 1.0) * (1.12 - speedFraction * 0.42);

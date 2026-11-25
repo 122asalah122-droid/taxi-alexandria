@@ -732,7 +732,7 @@ export function createSkyDomeMaterial(atmosphere: 'day' | 'sunset' | 'night'): T
       ? { top: 0x010309, mid: 0x030816, bottom: 0x081022 }
       : atmosphere === 'sunset'
         ? { top: 0x4c2b6e, mid: 0xc96480, bottom: 0xfb923c }
-        : { top: 0x2563eb, mid: 0x7dd3fc, bottom: 0xbae6fd };
+        : { top: 0x1d6fe2, mid: 0x5ab7f8, bottom: 0xc8ebff };
 
   return new THREE.ShaderMaterial({
     side: THREE.BackSide,
@@ -742,7 +742,12 @@ export function createSkyDomeMaterial(atmosphere: 'day' | 'sunset' | 'night'): T
       topColor: { value: new THREE.Color(palette.top) },
       midColor: { value: new THREE.Color(palette.mid) },
       bottomColor: { value: new THREE.Color(palette.bottom) },
-      sunDir: { value: new THREE.Vector3(0.62, 0.145, -0.77).normalize() },
+      sunDir: {
+        value:
+          atmosphere === 'day'
+            ? new THREE.Vector3(0.45, 0.56, -0.69).normalize()
+            : new THREE.Vector3(0.62, 0.145, -0.77).normalize(),
+      },
       moonDir: { value: new THREE.Vector3(0.42, 0.42, -0.80).normalize() },
       isSunset: { value: atmosphere === 'sunset' ? 1.0 : 0.0 },
       isNight: { value: atmosphere === 'night' ? 1.0 : 0.0 },
@@ -801,6 +806,16 @@ export function createSkyDomeMaterial(atmosphere: 'day' | 'sunset' | 'night'): T
           float starHash = fract(sin(dot(starUv, vec2(127.1, 311.7))) * 43758.5453);
           float star = smoothstep(0.986, 0.997, starHash) * smoothstep(0.08, 0.35, h);
           col += vec3(0.92, 0.96, 1.0) * star * 1.1;
+        } else {
+          // Bright sunny Mediterranean Day sky: crisp white-gold sun & soft white clouds
+          float sunAmt = max(dot(dir, sunDir), 0.0);
+          col += vec3(1.0, 0.98, 0.90) * pow(sunAmt, 14.0) * 0.22;
+          col += vec3(1.0, 0.99, 0.94) * pow(sunAmt, 140.0) * 0.85;
+          col = mix(col, vec3(1.0, 1.0, 0.98), smoothstep(0.9985, 0.9994, sunAmt));
+
+          float cloudWisp = sin(dir.x * 6.0 + dir.z * 5.0) * cos(dir.z * 7.5 - dir.x * 3.5);
+          float dayCloudBand = smoothstep(0.08, 0.28, h) * (1.0 - smoothstep(0.32, 0.62, h));
+          col = mix(col, vec3(0.98, 0.99, 1.0), max(0.0, cloudWisp) * dayCloudBand * 0.28);
         }
 
         gl_FragColor = vec4(col, 1.0);
@@ -1917,39 +1932,49 @@ export function createTaxiRoofSignTexture(maxAnisotropy = 4): THREE.CanvasTextur
 
 export function createAlexTaxiSignTexture(maxAnisotropy = 4): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 144;
+  canvas.width = 1024;
+  canvas.height = 288;
   const ctx = canvas.getContext('2d')!;
 
-  // Luminous golden-yellow Alexandria Taxi roof lightbox gradient
-  const grad = ctx.createLinearGradient(0, 0, 0, 144);
-  grad.addColorStop(0, '#FEF9C3');
+  // Rich high-contrast Alexandria golden-yellow lightbox background (never washed out under ACES tone mapping)
+  const grad = ctx.createLinearGradient(0, 0, 0, 288);
+  grad.addColorStop(0, '#FFE44D');
   grad.addColorStop(0.5, '#FACC15');
   grad.addColorStop(1, '#EAB308');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 512, 144);
+  ctx.fillRect(0, 0, 1024, 288);
 
-  // Outer sleek black frame
-  ctx.strokeStyle = '#090D16';
-  ctx.lineWidth = 10;
-  ctx.strokeRect(5, 5, 502, 134);
+  // Outer bold obsidian frame
+  ctx.strokeStyle = '#05070B';
+  ctx.lineWidth = 18;
+  ctx.strokeRect(9, 9, 1006, 270);
 
-  // Iconic Alexandria black-and-yellow taxi checker strips on top & bottom edges
-  const sq = 16;
-  for (let i = 0; i < 30; i++) {
-    ctx.fillStyle = i % 2 === 0 ? '#090D16' : '#FEF08A';
-    ctx.fillRect(16 + i * sq, 12, sq, 12);
-    ctx.fillStyle = i % 2 === 1 ? '#090D16' : '#FEF08A';
-    ctx.fillRect(16 + i * sq, 120, sq, 12);
+  // Clean Alexandria black-and-yellow taxi checker strips along top & bottom edges (well clear of text)
+  const sq = 26;
+  for (let i = 0; i < 37; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#05070B' : '#FFE44D';
+    ctx.fillRect(30 + i * sq, 20, sq, 20);
+    ctx.fillStyle = i % 2 === 1 ? '#05070B' : '#FFE44D';
+    ctx.fillRect(30 + i * sq, 248, sq, 20);
   }
 
-  // Bold Arabic title: "تاكسي الإسكندرية"
+  // Crisp inner divider rules so text sits in a clean luminous band
+  ctx.fillStyle = '#05070B';
+  ctx.fillRect(28, 42, 968, 5);
+  ctx.fillRect(28, 241, 968, 5);
+
+  // Ultra-clear bold Arabic title: "تاكسي الإسكندرية"
   ctx.direction = 'rtl';
-  ctx.fillStyle = '#090D16';
-  ctx.font = '900 54px "Cairo", "Tajawal", sans-serif';
+  ctx.font = '900 104px "Cairo", "Tajawal", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('تاكسي الإسكندرية', 256, 74);
+  // Subtle crisp light outline around thick jet-black letters for razor-sharp readability at all distances
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(255, 251, 220, 0.72)';
+  ctx.lineWidth = 10;
+  ctx.strokeText('تاكسي الإسكندرية', 512, 146);
+  ctx.fillStyle = '#05070B';
+  ctx.fillText('تاكسي الإسكندرية', 512, 146);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -1959,48 +1984,104 @@ export function createAlexTaxiSignTexture(maxAnisotropy = 4): THREE.CanvasTextur
 
 export function createAlexTaxiDoorDecalTexture(maxAnisotropy = 4): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
-  canvas.width = 384;
-  canvas.height = 168;
+  canvas.width = 1024;
+  canvas.height = 448;
   const ctx = canvas.getContext('2d')!;
 
   // Classic Alexandria Taxi jet-black lower door body
-  ctx.fillStyle = '#111827';
-  ctx.fillRect(0, 0, 384, 168);
+  ctx.fillStyle = '#0B0F17';
+  ctx.fillRect(0, 0, 1024, 448);
 
-  // Subtle metallic highlight along upper shoulder of door
-  const gloss = ctx.createLinearGradient(0, 0, 0, 168);
-  gloss.addColorStop(0, 'rgba(255,255,255,0.14)');
-  gloss.addColorStop(0.25, 'rgba(255,255,255,0.03)');
-  gloss.addColorStop(1, 'rgba(0,0,0,0.22)');
+  // Subtle vertical body-panel sheen
+  const gloss = ctx.createLinearGradient(0, 0, 0, 448);
+  gloss.addColorStop(0, 'rgba(255,255,255,0.12)');
+  gloss.addColorStop(0.28, 'rgba(255,255,255,0.02)');
+  gloss.addColorStop(1, 'rgba(0,0,0,0.28)');
   ctx.fillStyle = gloss;
-  ctx.fillRect(0, 0, 384, 168);
+  ctx.fillRect(0, 0, 1024, 448);
 
-  // Yellow Alexandria checker belt across upper door
-  const sq = 16;
-  for (let i = 0; i < 24; i++) {
-    ctx.fillStyle = i % 2 === 0 ? '#FACC15' : '#0B0F19';
-    ctx.fillRect(i * sq, 14, sq, 14);
-    ctx.fillStyle = i % 2 === 1 ? '#FACC15' : '#0B0F19';
-    ctx.fillRect(i * sq, 28, sq, 14);
+  // Iconic double-row Alexandria yellow-and-black checker belt across upper door
+  const sq = 32;
+  for (let i = 0; i < 32; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#FACC15' : '#05070B';
+    ctx.fillRect(i * sq, 26, sq, 28);
+    ctx.fillStyle = i % 2 === 1 ? '#FACC15' : '#05070B';
+    ctx.fillRect(i * sq, 54, sq, 28);
   }
 
-  // Golden-bordered door badge reading "تاكسي الإسكندرية"
-  ctx.fillStyle = '#0B1120';
-  ctx.strokeStyle = '#FACC15';
-  ctx.lineWidth = 4;
-  ctx.fillRect(30, 56, 324, 82);
-  ctx.strokeRect(30, 56, 324, 82);
+  // High-contrast golden-yellow door plaque so "تاكسي الإسكندرية" pops clearly against the black door
+  const bx = 56;
+  const by = 114;
+  const bw = 912;
+  const bh = 264;
+  ctx.fillStyle = '#FACC15';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.strokeStyle = '#05070B';
+  ctx.lineWidth = 12;
+  ctx.strokeRect(bx + 10, by + 10, bw - 20, bh - 20);
+  ctx.strokeStyle = '#FEF08A';
+  ctx.lineWidth = 5;
+  ctx.strokeRect(bx, by, bw, bh);
 
   ctx.direction = 'rtl';
-  ctx.fillStyle = '#FDE047';
-  ctx.font = '900 34px "Cairo", "Tajawal", sans-serif';
+  ctx.fillStyle = '#05070B';
+  ctx.font = '900 90px "Cairo", "Tajawal", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('تاكسي الإسكندرية', 192, 92);
+  ctx.fillText('تاكسي الإسكندرية', 512, 224);
 
-  ctx.fillStyle = '#CBD5E1';
-  ctx.font = '700 14px sans-serif';
-  ctx.fillText('ALEXANDRIA TAXI', 192, 122);
+  // Clean black subtitle band at bottom of door plaque
+  ctx.fillStyle = '#05070B';
+  ctx.fillRect(bx + 24, by + 188, bw - 48, 52);
+  ctx.direction = 'ltr';
+  ctx.fillStyle = '#FDE047';
+  ctx.font = '800 32px sans-serif';
+  ctx.fillText('ALEXANDRIA TAXI  •  أجرة الإسكندرية', 512, by + 215);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = maxAnisotropy;
+  return tex;
+}
+
+export function createAlexTaxiRearBannerTexture(maxAnisotropy = 4): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 240;
+  const ctx = canvas.getContext('2d')!;
+
+  // Rich golden-yellow rear trunk banner framed cleanly for 3rd-person chase camera legibility
+  const grad = ctx.createLinearGradient(0, 0, 0, 240);
+  grad.addColorStop(0, '#FFE44D');
+  grad.addColorStop(0.5, '#FACC15');
+  grad.addColorStop(1, '#EAB308');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 1024, 240);
+
+  ctx.strokeStyle = '#05070B';
+  ctx.lineWidth = 14;
+  ctx.strokeRect(7, 7, 1010, 226);
+
+  // Side Alexandria checker accents on left & right of banner
+  const sq = 22;
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 2; col++) {
+      ctx.fillStyle = (row + col) % 2 === 0 ? '#05070B' : '#FFE44D';
+      ctx.fillRect(20 + col * sq, 21 + row * sq, sq, sq);
+      ctx.fillRect(1004 - (col + 1) * sq, 21 + row * sq, sq, sq);
+    }
+  }
+
+  ctx.direction = 'rtl';
+  ctx.font = '900 100px "Cairo", "Tajawal", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(255, 251, 220, 0.72)';
+  ctx.lineWidth = 9;
+  ctx.strokeText('تاكسي الإسكندرية', 512, 122);
+  ctx.fillStyle = '#05070B';
+  ctx.fillText('تاكسي الإسكندرية', 512, 122);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;

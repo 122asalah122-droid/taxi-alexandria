@@ -7,8 +7,11 @@ import {
   Flag,
   Gauge,
   Lock,
+  Moon,
   SlidersHorizontal,
   Sparkles,
+  Sun,
+  Sunset,
   Trophy,
   X,
   Zap,
@@ -19,6 +22,7 @@ import { createSeaTexture, createSkyDomeMaterial } from '../game/textures3d';
 import { createRealisticTreeBundle } from '../game/trees3d';
 import { SeaSoundButton } from './SeaSoundButton';
 import {
+  AtmosphereMode,
   GraphicsQuality,
   PlayerProgress,
   RaceBikeDef,
@@ -32,6 +36,8 @@ interface RaceSetupScreenProps {
   config: RaceConfig;
   progress: PlayerProgress;
   riderStyle: RiderStyle;
+  atmosphere: AtmosphereMode;
+  onChangeAtmosphere: (mode: AtmosphereMode) => void;
   onChangeConfig: (next: RaceConfig) => void;
   onSelectMoto: (motoId: RaceBikeId) => void;
   onBuyMoto: (motoId: RaceBikeId, price: number) => void;
@@ -52,7 +58,10 @@ const QUALITY_OPTIONS: { id: GraphicsQuality; label: string }[] = [
   { id: 'high', label: 'عالي' },
 ];
 
-const SunsetCornicheBackdrop3D: React.FC<{ quality: GraphicsQuality }> = ({ quality }) => {
+const CornicheBackdrop3D: React.FC<{ quality: GraphicsQuality; atmosphere: AtmosphereMode }> = ({
+  quality,
+  atmosphere,
+}) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [lost, setLost] = useState(false);
 
@@ -106,28 +115,42 @@ const SunsetCornicheBackdrop3D: React.FC<{ quality: GraphicsQuality }> = ({ qual
     renderer.domElement.addEventListener('webglcontextrestored', onRestored);
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xd97d5a, 0.0052);
+    scene.fog = new THREE.FogExp2(
+      atmosphere === 'night' ? 0x091122 : atmosphere === 'sunset' ? 0xd97d5a : 0xbae0fa,
+      atmosphere === 'night' ? 0.0056 : atmosphere === 'sunset' ? 0.0052 : 0.0032,
+    );
 
     const camera = new THREE.PerspectiveCamera(56, w / h, 0.2, 520);
     camera.position.set(4, 5.2, 22);
     camera.lookAt(-12, 3.2, -75);
 
-    const skyMat = createSkyDomeMaterial('sunset');
+    const skyMat = createSkyDomeMaterial(atmosphere);
     const sky = new THREE.Mesh(new THREE.SphereGeometry(420, 20, 14), skyMat);
     scene.add(sky);
 
-    const hemi = new THREE.HemisphereLight(0xc495f5, 0xea8a4b, 0.9);
-    const sun = new THREE.DirectionalLight(0xffa955, 2.2);
-    sun.position.set(-70, 22, -65);
+    const hemi = new THREE.HemisphereLight(
+      atmosphere === 'night' ? 0x4b638a : atmosphere === 'sunset' ? 0xc495f5 : 0xe0f2fe,
+      atmosphere === 'night' ? 0x101827 : atmosphere === 'sunset' ? 0xea8a4b : 0x64748b,
+      atmosphere === 'night' ? 0.55 : atmosphere === 'sunset' ? 0.9 : 1.05,
+    );
+    const sun = new THREE.DirectionalLight(
+      atmosphere === 'night' ? 0xbfdbfe : atmosphere === 'sunset' ? 0xffa955 : 0xfffdf5,
+      atmosphere === 'night' ? 0.85 : atmosphere === 'sunset' ? 2.2 : 2.35,
+    );
+    sun.position.set(
+      atmosphere === 'sunset' ? -70 : 45,
+      atmosphere === 'sunset' ? 22 : 68,
+      atmosphere === 'sunset' ? -65 : 30,
+    );
     scene.add(hemi, sun);
 
     const maxAniso = Math.min(2, renderer.capabilities.getMaxAnisotropy());
     const seaTex = createSeaTexture(maxAniso);
     const seaMat = new THREE.MeshStandardMaterial({
       map: seaTex,
-      color: 0x155678,
+      color: atmosphere === 'night' ? 0x0b357a : atmosphere === 'sunset' ? 0x144ea8 : 0x1565d8,
       roughness: 0.14,
-      metalness: 0.55,
+      metalness: atmosphere === 'sunset' ? 0.45 : 0.25,
     });
     const sea = new THREE.Mesh(new THREE.PlaneGeometry(360, 420), seaMat);
     sea.rotation.x = -Math.PI / 2;
@@ -217,23 +240,35 @@ const SunsetCornicheBackdrop3D: React.FC<{ quality: GraphicsQuality }> = ({ qual
         container.removeChild(renderer.domElement);
       }
     };
-  }, [quality]);
+  }, [quality, atmosphere]);
+
+  const fallbackGradient =
+    atmosphere === 'night'
+      ? 'linear-gradient(180deg, #020617 0%, #0b1630 48%, #102546 78%, #040914 100%)'
+      : atmosphere === 'sunset'
+        ? 'linear-gradient(180deg, #2d1b4e 0%, #8f3d56 42%, #e88446 72%, #0e2438 100%)'
+        : 'linear-gradient(180deg, #1d6fe2 0%, #56b2f6 48%, #a9dcff 74%, #1565d8 100%)';
+
+  const overlayGradient =
+    atmosphere === 'night'
+      ? 'radial-gradient(circle at 50% 20%, rgba(56, 189, 248, 0.12), rgba(2, 6, 23, 0.72) 72%, rgba(2, 6, 23, 0.9) 100%)'
+      : atmosphere === 'sunset'
+        ? 'radial-gradient(circle at 50% 20%, rgba(251, 191, 36, 0.12), rgba(7, 11, 20, 0.72) 72%, rgba(7, 11, 20, 0.9) 100%)'
+        : 'radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.08), rgba(7, 16, 32, 0.48) 72%, rgba(7, 14, 28, 0.76) 100%)';
 
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 z-0"
       style={{
-        background:
-          'linear-gradient(180deg, #2d1b4e 0%, #8f3d56 42%, #e88446 72%, #0e2438 100%)',
+        background: fallbackGradient,
       }}
     >
       {!lost && <div ref={mountRef} className="w-full h-full" />}
       <div
         className="absolute inset-0"
         style={{
-          background:
-            'radial-gradient(circle at 50% 20%, rgba(251, 191, 36, 0.12), rgba(7, 11, 20, 0.72) 72%, rgba(7, 11, 20, 0.9) 100%)',
+          background: overlayGradient,
         }}
       />
     </div>
@@ -244,7 +279,8 @@ const VehiclePreview3D: React.FC<{
   bike: RaceBikeDef;
   riderStyle: RiderStyle;
   quality: GraphicsQuality;
-}> = ({ bike, riderStyle, quality }) => {
+  atmosphere: AtmosphereMode;
+}> = ({ bike, riderStyle, quality, atmosphere }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const dragYawRef = useRef(0.58);
   const draggingRef = useRef(false);
@@ -303,13 +339,26 @@ const VehiclePreview3D: React.FC<{
     camera.position.set(0, 1.05, 3.15);
     camera.lookAt(0, 0.58, 0);
 
-    // Three-point sunset showroom lighting
-    const hemi = new THREE.HemisphereLight(0xd8b4fe, 0x334155, 1.15);
-    const keyLight = new THREE.DirectionalLight(0xffbe7b, 2.5);
+    // Three-point showroom lighting synced to Day / Sunset / Night
+    const hemi = new THREE.HemisphereLight(
+      atmosphere === 'night' ? 0x60a5fa : atmosphere === 'sunset' ? 0xd8b4fe : 0xffffff,
+      atmosphere === 'night' ? 0x1e293b : atmosphere === 'sunset' ? 0x334155 : 0x64748b,
+      atmosphere === 'night' ? 0.85 : atmosphere === 'sunset' ? 1.15 : 1.25,
+    );
+    const keyLight = new THREE.DirectionalLight(
+      atmosphere === 'night' ? 0xdbeafe : atmosphere === 'sunset' ? 0xffbe7b : 0xfffef8,
+      atmosphere === 'night' ? 1.8 : atmosphere === 'sunset' ? 2.5 : 2.65,
+    );
     keyLight.position.set(3.2, 4.4, 3.8);
-    const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.55);
+    const rimLight = new THREE.DirectionalLight(
+      atmosphere === 'night' ? 0x38bdf8 : atmosphere === 'sunset' ? 0xfb923c : 0x7dd3fc,
+      atmosphere === 'night' ? 1.9 : 1.45,
+    );
     rimLight.position.set(-3.5, 2.2, -3.5);
-    const fillLight = new THREE.DirectionalLight(0xfef08a, 1.0);
+    const fillLight = new THREE.DirectionalLight(
+      atmosphere === 'night' ? 0x93c5fd : atmosphere === 'sunset' ? 0xfef08a : 0xf8fafc,
+      atmosphere === 'night' ? 0.85 : 1.05,
+    );
     fillLight.position.set(0, 1.2, 4.2);
     scene.add(hemi, keyLight, rimLight, fillLight);
 
@@ -371,7 +420,7 @@ const VehiclePreview3D: React.FC<{
         rpmRatio: 0.14,
         gear: 1,
         fuelPct: 100,
-        atmosphere: 'sunset',
+        atmosphere,
         isPov: false,
       });
       renderer.render(scene, camera);
@@ -403,7 +452,7 @@ const VehiclePreview3D: React.FC<{
         container.removeChild(renderer.domElement);
       }
     };
-  }, [bike.id, bike.vehicleKind, bike.paintHex, bike.accentHex, bike.isVespa, riderStyle, quality]);
+  }, [bike.id, bike.vehicleKind, bike.paintHex, bike.accentHex, bike.isVespa, riderStyle, quality, atmosphere]);
 
   return (
     <div
@@ -447,6 +496,8 @@ export const RaceSetupScreen: React.FC<RaceSetupScreenProps> = ({
   config,
   progress,
   riderStyle,
+  atmosphere,
+  onChangeAtmosphere,
   onChangeConfig,
   onSelectMoto,
   onBuyMoto,
@@ -466,8 +517,8 @@ export const RaceSetupScreen: React.FC<RaceSetupScreenProps> = ({
 
   return (
     <div className="relative min-h-dvh w-full flex flex-col text-slate-100 overflow-x-hidden">
-      {/* Live 3D Alexandria Sunset Corniche Background */}
-      <SunsetCornicheBackdrop3D quality={config.graphicsQuality} />
+      {/* Live 3D Alexandria Corniche Background (Day / Sunset / Night) */}
+      <CornicheBackdrop3D quality={config.graphicsQuality} atmosphere={atmosphere} />
 
       {/* Top Navigation & Mode Switcher */}
       <header className="relative z-10 shrink-0 w-full max-w-6xl mx-auto px-3 sm:px-6 pt-3 pb-2 flex flex-wrap items-center justify-between gap-2.5">
@@ -521,7 +572,46 @@ export const RaceSetupScreen: React.FC<RaceSetupScreenProps> = ({
           </div>
         </div>
 
-        <div className="order-2 sm:order-3 flex items-center gap-2">
+        <div className="order-2 sm:order-3 flex items-center gap-2 flex-wrap justify-end">
+          {/* Day / Sunset / Night 3-Way Switcher */}
+          <div className="flex rounded-xl bg-slate-950/85 border border-white/15 p-1 gap-0.5 backdrop-blur-md shrink-0">
+            <button
+              type="button"
+              onClick={() => onChangeAtmosphere('day')}
+              className={`min-h-[34px] px-2.5 rounded-lg text-xs font-black flex items-center gap-1 whitespace-nowrap transition-colors ${
+                atmosphere === 'day'
+                  ? 'bg-sky-400 text-slate-950'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Sun className="w-3.5 h-3.5" />
+              <span>نهار</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeAtmosphere('sunset')}
+              className={`min-h-[34px] px-2.5 rounded-lg text-xs font-black flex items-center gap-1 whitespace-nowrap transition-colors ${
+                atmosphere === 'sunset'
+                  ? 'bg-orange-400 text-slate-950'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Sunset className="w-3.5 h-3.5" />
+              <span>غروب</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeAtmosphere('night')}
+              className={`min-h-[34px] px-2.5 rounded-lg text-xs font-black flex items-center gap-1 whitespace-nowrap transition-colors ${
+                atmosphere === 'night'
+                  ? 'bg-indigo-400 text-slate-950'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Moon className="w-3.5 h-3.5" />
+              <span>ليل</span>
+            </button>
+          </div>
           <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-amber-400/35 text-amber-300 font-black text-xs font-mono tabular-nums flex items-center gap-1.5 whitespace-nowrap">
             <Coins className="w-3.5 h-3.5 text-amber-400" />
             <span>{progress.wallet} ج.م</span>
@@ -655,6 +745,7 @@ export const RaceSetupScreen: React.FC<RaceSetupScreenProps> = ({
                   bike={selectedBike}
                   riderStyle={riderStyle}
                   quality={config.graphicsQuality}
+                  atmosphere={atmosphere}
                 />
               </div>
 

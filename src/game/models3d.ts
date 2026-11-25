@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { LED_SIGN_OPTIONS } from './data';
 import {
   createAlexTaxiDoorDecalTexture,
+  createAlexTaxiRearBannerTexture,
   createAlexTaxiSignTexture,
   createBeanieKnitTexture,
   createCarDashUpdater,
@@ -174,15 +175,16 @@ export function buildPlayerTaxi3D(
   const keepVisibleInPov: THREE.Object3D[] = [];
 
   const blackBodyMat = new THREE.MeshStandardMaterial({
-    color: lv >= 7 ? 0x050811 : lv >= 4 ? 0x090d16 : 0x0f141d,
-    roughness: lv >= 6 ? 0.1 : lv >= 3 ? 0.16 : 0.25,
-    metalness: lv >= 6 ? 0.84 : lv >= 3 ? 0.72 : 0.55,
+    color: lv >= 7 ? 0x06080e : lv >= 4 ? 0x090c14 : 0x0d1119,
+    roughness: lv >= 6 ? 0.12 : lv >= 3 ? 0.17 : 0.24,
+    metalness: lv >= 6 ? 0.8 : lv >= 3 ? 0.68 : 0.5,
   });
 
+  // Rich iconic Alexandria Taxi golden-yellow (harmonized & vivid across all 7 levels)
   const yellowPaintMat = new THREE.MeshStandardMaterial({
-    color: lv >= 7 ? 0xfef08a : lv >= 5 ? 0xfde047 : 0xfacc15,
-    roughness: lv >= 6 ? 0.11 : lv >= 3 ? 0.15 : 0.22,
-    metalness: lv >= 6 ? 0.62 : lv >= 3 ? 0.48 : 0.35,
+    color: lv >= 7 ? 0xfde047 : lv >= 4 ? 0xfacc15 : 0xf5b800,
+    roughness: lv >= 6 ? 0.14 : lv >= 3 ? 0.18 : 0.24,
+    metalness: lv >= 6 ? 0.52 : lv >= 3 ? 0.42 : 0.3,
   });
 
   const chromeMat = new THREE.MeshStandardMaterial({
@@ -233,14 +235,14 @@ export function buildPlayerTaxi3D(
   hoodCap.castShadow = true;
   group.add(hoodCap);
 
-  // Rear trunk
-  const rearBoot = new THREE.Mesh(new THREE.BoxGeometry(bodyW, 0.54, 0.92), blackBodyMat);
-  rearBoot.position.set(0, 0.54, bodyLen * 0.38);
+  // Rear trunk (aligned flush to bodyLen / 2 so rear "تاكسي الإسكندرية" plaque, lights, and plate sit cleanly)
+  const rearBoot = new THREE.Mesh(new THREE.BoxGeometry(bodyW, 0.54, 0.96), blackBodyMat);
+  rearBoot.position.set(0, 0.54, bodyLen / 2 - 0.48);
   rearBoot.castShadow = true;
   group.add(rearBoot);
 
-  const trunkCap = new THREE.Mesh(new THREE.BoxGeometry(bodyW - 0.08, 0.09, 0.88), yellowPaintMat);
-  trunkCap.position.set(0, 0.84, bodyLen * 0.38);
+  const trunkCap = new THREE.Mesh(new THREE.BoxGeometry(bodyW - 0.08, 0.09, 0.92), yellowPaintMat);
+  trunkCap.position.set(0, 0.84, bodyLen / 2 - 0.48);
   group.add(trunkCap);
 
   // Side sills below doors
@@ -376,14 +378,15 @@ export function buildPlayerTaxi3D(
   rearGlass.rotation.x = 0.32;
   group.add(rearGlass);
 
-  // Hinged 3D Right & Left Passenger Doors with "تاكسي الإسكندرية" Door Plaques!
+  // Hinged 3D Right & Left Passenger Doors with Ultra-Clear "تاكسي الإسكندرية" Door Plaques!
   const doorDecalTex = createAlexTaxiDoorDecalTexture(maxAnisotropy);
   const doorDecalMat = new THREE.MeshStandardMaterial({
     map: doorDecalTex,
     emissiveMap: doorDecalTex,
-    emissive: new THREE.Color(0xffffff),
-    emissiveIntensity: 0.22,
-    roughness: 0.3,
+    emissive: new THREE.Color(0xfffbeb),
+    emissiveIntensity: 0.16,
+    roughness: 0.28,
+    metalness: 0.12,
   });
 
   const buildHingedDoor = (side: 1 | -1) => {
@@ -420,8 +423,8 @@ export function buildPlayerTaxi3D(
   const rightDoorPivot = buildHingedDoor(1);
   const leftDoorPivot = buildHingedDoor(-1);
 
-  // Illuminated Roof Lightbox Plaque reading "تاكسي الإسكندرية" (clearly readable day & night!)
-  const roofMount = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.06, 0.36), blackBodyMat);
+  // Illuminated Roof Lightbox Plaque reading "تاكسي الإسكندرية" (razor-sharp high-contrast day & night!)
+  const roofMount = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.06, 0.38), blackBodyMat);
   roofMount.position.set(0, 1.5, -0.04);
   group.add(roofMount);
 
@@ -429,17 +432,18 @@ export function buildPlayerTaxi3D(
   const taxiSignFaceMat = new THREE.MeshStandardMaterial({
     map: taxiSignTex,
     emissiveMap: taxiSignTex,
-    emissive: new THREE.Color(0xfffbeb),
-    emissiveIntensity: 1.05,
-    roughness: 0.22,
+    emissive: new THREE.Color(0xfff8d6),
+    emissiveIntensity: 0.38,
+    roughness: 0.26,
+    metalness: 0.05,
   });
   const taxiSignSideMat = new THREE.MeshStandardMaterial({
     color: 0xfacc15,
     emissive: 0xca8a04,
-    emissiveIntensity: 0.45,
-    roughness: 0.25,
+    emissiveIntensity: 0.28,
+    roughness: 0.28,
   });
-  const roofSignBox = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.3, 0.3), [
+  const roofSignBox = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.36, 0.32), [
     taxiSignSideMat,
     taxiSignSideMat,
     taxiSignSideMat,
@@ -447,19 +451,39 @@ export function buildPlayerTaxi3D(
     taxiSignFaceMat,
     taxiSignFaceMat,
   ]);
-  roofSignBox.position.set(0, 1.67, -0.04);
+  roofSignBox.position.set(0, 1.7, -0.04);
   group.add(roofSignBox);
 
   // Small LED Availability Indicator Strip on top of the "تاكسي الإسكندرية" lightbox (Green = Free, Amber = Busy)
   const roofSignMat = new THREE.MeshStandardMaterial({
     color: 0x22c55e,
     emissive: 0x22c55e,
-    emissiveIntensity: 1.2,
-    roughness: 0.22,
+    emissiveIntensity: 1.0,
+    roughness: 0.24,
   });
-  const statusBeacon = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.06, 0.14), roofSignMat);
-  statusBeacon.position.set(0, 1.85, -0.04);
+  const statusBeacon = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.06, 0.14), roofSignMat);
+  statusBeacon.position.set(0, 1.91, -0.04);
   group.add(statusBeacon);
+
+  // Crisp Rear Trunk "تاكسي الإسكندرية" Plaque (clearly readable in 3rd-person chase camera!)
+  const rearBannerTex = createAlexTaxiRearBannerTexture(maxAnisotropy);
+  const rearBannerMat = new THREE.MeshStandardMaterial({
+    map: rearBannerTex,
+    emissiveMap: rearBannerTex,
+    emissive: new THREE.Color(0xfff8d6),
+    emissiveIntensity: 0.28,
+    roughness: 0.26,
+    metalness: 0.06,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+  const rearBanner = new THREE.Mesh(
+    new THREE.PlaneGeometry(Math.min(1.52, bodyW - 0.28), 0.24),
+    rearBannerMat,
+  );
+  rearBanner.position.set(0, 0.74, bodyLen / 2 + 0.026);
+  group.add(rearBanner);
 
   const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(bodyW + 0.08, 0.16, 0.16), chromeMat);
   frontBumper.position.set(0, 0.3, -bodyLen / 2 - 0.04);
@@ -473,9 +497,16 @@ export function buildPlayerTaxi3D(
   grille.position.set(0, 0.53, -bodyLen / 2 - 0.02);
   group.add(grille);
 
-  const plateMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.4 });
-  const rearPlate = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.16, 0.04), plateMat);
-  rearPlate.position.set(0, 0.5, bodyLen / 2 + 0.02);
+  const taxiPlateTex = createEgyptianPlateTexture('س ن ق ٤٨٢', '#F97316', maxAnisotropy);
+  const plateMat = new THREE.MeshStandardMaterial({
+    map: taxiPlateTex,
+    emissiveMap: taxiPlateTex,
+    emissive: new THREE.Color(0xffffff),
+    emissiveIntensity: 0.15,
+    roughness: 0.35,
+  });
+  const rearPlate = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.18, 0.04), plateMat);
+  rearPlate.position.set(0, 0.49, bodyLen / 2 + 0.02);
   group.add(rearPlate);
 
   for (const side of [-1, 1]) {

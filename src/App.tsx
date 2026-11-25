@@ -89,9 +89,9 @@ const INITIAL_HUD: HudSnapshot = {
   activeStunt: 'none',
   distanceM: 0,
   routeProgressPct: 0,
-  currentLandmark: 'بوابة المنتزه والمندرة',
-  nextLandmark: 'مسجد سيدي بشر وميامي',
-  streetBanner: 'طريق الجيش · المندرة والمنتزه',
+  currentLandmark: 'المنتزه (قصر المنتزه)',
+  nextLandmark: 'العصافرة وميامي',
+  streetBanner: 'طريق الجيش · قصر المنتزه',
   timeLeftSec: null,
   passenger: null,
   toastMessage: null,
@@ -139,7 +139,7 @@ export default function App() {
   const [riderModalOpen, setRiderModalOpen] = useState(false);
 
   const [cameraMode, setCameraMode] = useState<CameraMode>('hood');
-  const [atmosphere, setAtmosphere] = useState<AtmosphereMode>('sunset');
+  const [atmosphere, setAtmosphere] = useState<AtmosphereMode>('day');
   const [controls, setControls] = useState<ControlSettings>(() => loadControlSettings());
   const [raceConfig, setRaceConfig] = useState<RaceConfig>(() => loadRaceConfig());
   const [controlsModalOpen, setControlsModalOpen] = useState(false);
@@ -717,6 +717,8 @@ export default function App() {
           config={raceConfig}
           progress={progress}
           riderStyle="green_tracksuit"
+          atmosphere={atmosphere}
+          onChangeAtmosphere={setAtmosphere}
           onChangeConfig={handleChangeRaceConfig}
           onSelectMoto={handleSelectMoto}
           onBuyMoto={handleBuyMoto}
@@ -733,6 +735,8 @@ export default function App() {
       {gameState === 'MOTO_GARAGE' && (
         <MotoGarageScreen
           progress={progress}
+          atmosphere={atmosphere}
+          onChangeAtmosphere={setAtmosphere}
           onSaveTuning={handleSaveMotoTuning}
           onSelectMoto={handleSelectMoto}
           onBuyMoto={handleBuyMoto}
@@ -780,7 +784,7 @@ export default function App() {
                   activeTab === 'landmarks' ? 'bg-yellow-400 text-slate-950' : 'bg-white/5 text-slate-300'
                 }`}
               >
-                معالم المندرة ← بحري ({LANDMARKS.length})
+                معالم المنتزه ← قلعة قايتباي ({LANDMARKS.length})
               </button>
             </div>
           </header>
@@ -1165,6 +1169,23 @@ export default function App() {
             <div className="flex items-center gap-2 sm:gap-2.5 flex-nowrap shrink-0" style={{ background: 'transparent' }}>
               <button
                 type="button"
+                onClick={cycleAtmosphere}
+                aria-label="تبديل النهار والغروب والليل"
+                className="border-0 p-0 text-white font-bold text-[10px] flex items-center gap-0.5 whitespace-nowrap active:opacity-60"
+                style={{ background: 'transparent' }}
+              >
+                {atmosphere === 'day' ? (
+                  <Sun className="w-3.5 h-3.5 text-yellow-300" />
+                ) : atmosphere === 'sunset' ? (
+                  <Sunset className="w-3.5 h-3.5 text-orange-300" />
+                ) : (
+                  <Moon className="w-3.5 h-3.5 text-sky-300" />
+                )}
+                <span>{atmosphere === 'day' ? 'نهار' : atmosphere === 'sunset' ? 'غروب' : 'ليل'}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={handleCycleCamera}
                 aria-label="تبديل الكاميرا"
                 className="border-0 p-0 text-white font-bold text-[10px] flex items-center gap-0.5 whitespace-nowrap active:opacity-60"
@@ -1211,7 +1232,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* 3-Second Transparent Intro Hint Only (المندرة - بحري · ملف دوران · لف وارجع) — Auto-unmounts after 3 seconds, zero background */}
+          {/* 3-Second Transparent Intro Hint Only (المنتزه - بحري · ملف دوران · لف وارجع) — Auto-unmounts after 3 seconds, zero background */}
           {introHintVisible && gameState === 'PLAYING' && (
             <div
               className="pointer-events-none flex items-center justify-center gap-2 text-[10px] font-bold text-white/95 whitespace-nowrap [text-shadow:0_1px_3px_rgba(0,0,0,0.92)]"
@@ -1224,7 +1245,7 @@ export default function App() {
                 background: 'transparent',
               }}
             >
-              <span>{hud.travelDir === 1 ? 'بحري ← المندرة' : 'المندرة ← بحري'}</span>
+              <span>{hud.travelDir === 1 ? 'بحري ← المنتزه' : 'المنتزه ← بحري'}</span>
               <span>·</span>
               <span>ملف دوران · لف وارجع</span>
             </div>
