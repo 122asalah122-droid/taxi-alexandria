@@ -26,7 +26,14 @@ import { GarageView } from './components/GarageView';
 import { LandmarksView } from './components/LandmarksView';
 import { MotoGarageScreen } from './components/MotoGarageScreen';
 import { RaceSetupScreen } from './components/RaceSetupScreen';
+import { RemoveAdsButton } from './components/RemoveAdsButton';
 import { SeaSoundButton } from './components/SeaSoundButton';
+import {
+  checkRemoveAdsEntitlement,
+  loadRemoveAdsProductDetails,
+  purchaseRemoveAds,
+  syncAdFreeDocumentFlag,
+} from './game/playBilling';
 import {
   ALEX_DISTRICTS,
   formatRaceTime,
@@ -152,8 +159,24 @@ export default function App() {
   const [hud, setHud] = useState<HudSnapshot>(INITIAL_HUD);
   const [lastSummary, setLastSummary] = useState<RunSummary | null>(null);
   const [introHintVisible, setIntroHintVisible] = useState(false);
+  const [removeAdsPrice, setRemoveAdsPrice] = useState<string | null>(null);
+  const [billingBusy, setBillingBusy] = useState(false);
+  const [billingMessage, setBillingMessage] = useState<string | null>(null);
+  const billingToastTimerRef = useRef<number | null>(null);
   const creditedEarningsRef = useRef(0);
   const creditedTripsRef = useRef(0);
+
+  const adsRemoved = Boolean(progress.adsRemoved);
+
+  const showBillingMessage = useCallback((msg: string) => {
+    setBillingMessage(msg);
+    if (billingToastTimerRef.current) {
+      window.clearTimeout(billingToastTimerRef.current);
+    }
+    billingToastTimerRef.current = window.setTimeout(() => {
+      setBillingMessage(null);
+    }, 5500);
+  }, []);
 
   const inActiveRun = gameState === 'PLAYING' || gameState === 'PAUSED';
   useEffect(() => {
@@ -182,6 +205,83 @@ export default function App() {
       return next;
     });
   }, []);
+
+  // Keep DOM/wrapper ad-free flag synchronized with verified entitlement
+  useEffect(() => {
+    syncAdFreeDocumentFlag(adsRemoved);
+  }, [adsRemoved]);
+
+  // Verify Google Play Billing entitlement (remove_ads) & localized price on startup inside TWA
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const [entitlement, product] = await Promise.all([
+        checkRemoveAdsEntitlement(),
+        loadRemoveAdsProductDetails(),
+      ]);
+      if (!active) return;
+      if (product.formattedPrice) {
+        setRemoveAdsPrice(product.formattedPrice);
+      }
+      if (entitlement.supported) {
+        updateProgress((prev) =>
+          Boolean(prev.adsRemoved) === entitlement.owned
+            ? prev
+            : { ...prev, adsRemoved: entitlement.owned },
+        );
+      }
+    })();
+    return () => {
+      active = false;
+      if (billingToastTimerRef.current) {
+        window.clearTimeout(billingToastTimerRef.current);
+      }
+    };
+  }, [updateProgress]);
+
+  const handlePurchaseRemoveAds = useCallback(async () => {
+    if (billingBusy || adsRemoved) return;
+    setBillingBusy(true);
+    setBillingMessage(null);
+    try {
+      const result = await purchaseRemoveAds();
+      if (result.status === 'purchased' || result.status === 'already_owned') {
+        updateProgress((prev) => ({ ...prev, adsRemoved: true }));
+        syncAdFreeDocumentFlag(true);
+        showBillingMessage(
+          result.status === 'already_owned'
+            ? 'تمت استعادة عملية الشراء السابقة وإخفاء الإعلانات نهائياً!'
+            : 'شكراً لك! تمت إزالة الإعلانات نهائياً بنجاح.',
+        );
+      } else if (result.status === 'cancelled') {
+        showBillingMessage('تم إلغاء عملية الشراء.');
+      } else {
+        showBillingMessage(result.message);
+      }
+    } finally {
+      setBillingBusy(false);
+    }
+  }, [adsRemoved, billingBusy, showBillingMessage, updateProgress]);
+
+  const handleRestoreRemoveAds = useCallback(async () => {
+    if (billingBusy) return;
+    setBillingBusy(true);
+    setBillingMessage(null);
+    try {
+      const entitlement = await checkRemoveAdsEntitlement();
+      if (!entitlement.supported) {
+        showBillingMessage('استعادة المشتريات تعمل داخل التطبيق الرسمي المثبت من Google Play.');
+      } else if (entitlement.owned) {
+        updateProgress((prev) => ({ ...prev, adsRemoved: true }));
+        syncAdFreeDocumentFlag(true);
+        showBillingMessage('تمت استعادة شرائك بنجاح وإخفاء الإعلانات نهائياً!');
+      } else {
+        showBillingMessage('لا توجد عملية شراء سابقة لمنتج إزالة الإعلانات على هذا الحساب.');
+      }
+    } finally {
+      setBillingBusy(false);
+    }
+  }, [billingBusy, showBillingMessage, updateProgress]);
 
   const handleChangeControls = (next: ControlSettings) => {
     setControls(next);
@@ -604,6 +704,14 @@ export default function App() {
 
               <SeaSoundButton />
 
+              <RemoveAdsButton
+                variant="header"
+                adsRemoved={adsRemoved}
+                formattedPrice={removeAdsPrice}
+                busy={billingBusy}
+                onPurchase={handlePurchaseRemoveAds}
+              />
+
               <button
                 type="button"
                 onClick={() => setControlsModalOpen(true)}
@@ -614,6 +722,12 @@ export default function App() {
               </button>
             </div>
           </header>
+
+          {billingMessage && !controlsModalOpen && (
+            <div className="relative z-20 mx-auto max-w-md mt-2 px-4 py-2 rounded-xl bg-[#0f172a]/95 border border-amber-400/60 text-amber-200 text-xs font-bold text-center shadow-xl">
+              {billingMessage}
+            </div>
+          )}
 
           {/* Center Title Section */}
           <div className="relative z-10 text-center my-auto py-2">
@@ -1050,6 +1164,12 @@ export default function App() {
         atmosphere={atmosphere}
         modeTitle={MODE_LABELS[mode]}
         vehicleTitle={VEHICLE_LABELS[playerVehicleKind]}
+        adsRemoved={adsRemoved}
+        removeAdsPrice={removeAdsPrice}
+        billingBusy={billingBusy}
+        billingMessage={billingMessage}
+        onPurchaseRemoveAds={handlePurchaseRemoveAds}
+        onRestoreRemoveAds={handleRestoreRemoveAds}
         onChangeControls={handleChangeControls}
         onChangeAtmosphere={setAtmosphere}
         onStartGo={mode === 'race' ? launchConfiguredRace : launchDrive}
@@ -1492,6 +1612,7 @@ export default function App() {
             )}
         </main>
       )}
+      {!adsRemoved && <div id="google-play-ad-slot" data-ad-slot="active" className="hidden" aria-hidden="true" />}
     </div>
   );
 }

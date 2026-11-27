@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "dev.workers.app_122asalah122.taxi_alexandria.twa",
+      "sha256_cert_fingerprints": [
+        "60:49:B3:00:A0:D1:35:5E:F3:9D:2E:E9:B2:67:F7:09:D2:CD:D9:FF:96:B6:5E:4D:F2:9E:E7:DC:D7:2F:81:D6"
+      ]
+    }
+  }
+]

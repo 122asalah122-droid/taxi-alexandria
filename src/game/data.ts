@@ -1485,6 +1485,7 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   bestRaceTimes: {},
   motoTuning: { ...DEFAULT_MOTO_TUNING },
   ownedMotoParts: [...DEFAULT_OWNED_MOTO_PARTS],
+  adsRemoved: false,
 };
 
 export const DEFAULT_CONTROLS: ControlSettings = {
@@ -1572,6 +1573,7 @@ export function loadProgress(): PlayerProgress {
         ...(parsed.motoTuning ?? {}),
       },
       ownedMotoParts: mergedOwned,
+      adsRemoved: Boolean(parsed.adsRemoved),
     };
   } catch {
     return { ...DEFAULT_PROGRESS, dailyDate: getTodayDateKey() };

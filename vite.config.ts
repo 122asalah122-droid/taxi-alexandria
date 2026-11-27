@@ -114,12 +114,13 @@ export default defineConfig(() => {
           clientsClaim: true,
           skipWaiting: true,
           navigateFallback: 'index.html',
-          navigateFallbackDenylist: [/^\/@/, /^\/__/, /^\/api\//],
+          navigateFallbackDenylist: [/^\/@/, /^\/__/, /^\/api\//, /^\/\.well-known\//],
           runtimeCaching: [
             {
               urlPattern: ({url, request}) =>
                 !url.pathname.startsWith('/@') &&
                 !url.pathname.startsWith('/__') &&
+                !url.pathname.startsWith('/.well-known/') &&
                 (request.destination === 'document' ||
                   request.destination === 'script' ||
                   request.destination === 'style' ||

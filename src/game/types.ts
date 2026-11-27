@@ -377,4 +377,5 @@ export interface PlayerProgress {
   bestRaceTimes?: Partial<Record<RaceTrackId, number>>;
   motoTuning?: MotoTuningConfig;
   ownedMotoParts?: string[];
+  adsRemoved?: boolean;
 }

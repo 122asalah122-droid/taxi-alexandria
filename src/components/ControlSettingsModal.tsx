@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, Compass, Hand, Moon, Play, Smartphone, Sun, Sunset, X } from 'lucide-react';
 import { TIME_OF_DAY_OPTIONS } from '../game/data';
 import { AtmosphereMode, ControlSettings, GasMethod, SteeringMethod } from '../game/types';
+import { RemoveAdsButton } from './RemoveAdsButton';
 import { SeaSoundButton } from './SeaSoundButton';
 
 interface ControlSettingsModalProps {
@@ -10,6 +11,12 @@ interface ControlSettingsModalProps {
   atmosphere: AtmosphereMode;
   modeTitle: string;
   vehicleTitle: string;
+  adsRemoved: boolean;
+  removeAdsPrice: string | null;
+  billingBusy: boolean;
+  billingMessage?: string | null;
+  onPurchaseRemoveAds: () => void;
+  onRestoreRemoveAds: () => void;
   onChangeControls: (next: ControlSettings) => void;
   onChangeAtmosphere: (next: AtmosphereMode) => void;
   onStartGo: () => void;
@@ -22,6 +29,12 @@ export const ControlSettingsModal: React.FC<ControlSettingsModalProps> = ({
   atmosphere,
   modeTitle,
   vehicleTitle,
+  adsRemoved,
+  removeAdsPrice,
+  billingBusy,
+  billingMessage,
+  onPurchaseRemoveAds,
+  onRestoreRemoveAds,
   onChangeControls,
   onChangeAtmosphere,
   onStartGo,
@@ -204,6 +217,17 @@ export const ControlSettingsModal: React.FC<ControlSettingsModalProps> = ({
 
         {/* Sea Waves Audio Toggle */}
         <SeaSoundButton fullWidth />
+
+        {/* Official Google Play Billing: Remove Ads (SKU: remove_ads) */}
+        <RemoveAdsButton
+          variant="panel"
+          adsRemoved={adsRemoved}
+          formattedPrice={removeAdsPrice}
+          busy={billingBusy}
+          statusMessage={billingMessage}
+          onPurchase={onPurchaseRemoveAds}
+          onRestore={onRestoreRemoveAds}
+        />
 
         <button
           type="button"
