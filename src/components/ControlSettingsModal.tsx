@@ -71,6 +71,7 @@ export const ControlSettingsModal: React.FC<ControlSettingsModalProps> = ({
   return (
     <div
       className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
+      style={{ paddingBottom: 'calc(1rem + var(--ad-banner-offset, 0px))' }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="controls-modal-title"

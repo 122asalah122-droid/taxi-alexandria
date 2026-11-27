@@ -5,6 +5,7 @@ import {
   Camera,
   Flag,
   Fuel,
+  Gift,
   MapPin,
   Moon,
   Pause,
@@ -20,6 +21,7 @@ import {
   VolumeX,
   X,
 } from 'lucide-react';
+import { AdMobBanner } from './components/AdMobBanner';
 import { ControlSettingsModal } from './components/ControlSettingsModal';
 import { GameScene3D } from './components/GameScene3D';
 import { GarageView } from './components/GarageView';
@@ -28,6 +30,12 @@ import { MotoGarageScreen } from './components/MotoGarageScreen';
 import { RaceSetupScreen } from './components/RaceSetupScreen';
 import { RemoveAdsButton } from './components/RemoveAdsButton';
 import { SeaSoundButton } from './components/SeaSoundButton';
+import {
+  ADMOB_CONFIG,
+  initializeAdMob,
+  maybeShowInterstitialAfterRound,
+  showRewardedAdForBonus,
+} from './game/admob';
 import {
   checkRemoveAdsEntitlement,
   loadRemoveAdsProductDetails,
@@ -161,6 +169,7 @@ export default function App() {
   const [introHintVisible, setIntroHintVisible] = useState(false);
   const [removeAdsPrice, setRemoveAdsPrice] = useState<string | null>(null);
   const [billingBusy, setBillingBusy] = useState(false);
+  const [rewardAdBusy, setRewardAdBusy] = useState(false);
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
   const billingToastTimerRef = useRef<number | null>(null);
   const creditedEarningsRef = useRef(0);
@@ -206,9 +215,12 @@ export default function App() {
     });
   }, []);
 
-  // Keep DOM/wrapper ad-free flag synchronized with verified entitlement
+  // Keep DOM/wrapper ad-free flag and AdMob SDK synchronized with verified entitlement
   useEffect(() => {
     syncAdFreeDocumentFlag(adsRemoved);
+    if (!adsRemoved) {
+      void initializeAdMob(false);
+    }
   }, [adsRemoved]);
 
   // Verify Google Play Billing entitlement (remove_ads) & localized price on startup inside TWA
@@ -448,6 +460,37 @@ export default function App() {
     [updateProgress],
   );
 
+  const handleWatchRewardedAd = useCallback(async () => {
+    if (adsRemoved || rewardAdBusy) return;
+    setRewardAdBusy(true);
+    try {
+      const outcome = await showRewardedAdForBonus(adsRemoved);
+      if (outcome.status === 'rewarded') {
+        const bonus = outcome.amount;
+        const today = getTodayDateKey();
+        updateProgress((prev) => {
+          const sameDay = prev.dailyDate === today;
+          return {
+            ...prev,
+            wallet: prev.wallet + bonus,
+            dailyEarnings: (sameDay ? (prev.dailyEarnings ?? 0) : 0) + bonus,
+            dailyDate: today,
+          };
+        });
+        soundFX.playDropoff();
+        showBillingMessage(
+          outcome.isPreviewDemo
+            ? `🎁 مكافأة معاينة تجريبية: تمت إضافة +${bonus} ج.م لرصيدك داخل اللعبة!`
+            : `🎉 مبروك! تمت إضافة +${bonus} ج.م مكافأة مشاهدة الإعلان لرصيدك!`,
+        );
+      } else if (outcome.status === 'incomplete' || outcome.status === 'error') {
+        showBillingMessage(outcome.message);
+      }
+    } finally {
+      setRewardAdBusy(false);
+    }
+  }, [adsRemoved, rewardAdBusy, showBillingMessage, updateProgress]);
+
   const handleGameOver = useCallback(
     (summary: RunSummary) => {
       let isNewRecord = false;
@@ -484,8 +527,13 @@ export default function App() {
           bestRaceTimes: nextBestTimes,
         };
       });
+
+      // Interstitial AdMob: triggers ONLY after round ends, every 3 completed taxi trips, max once per 90s, never if remove_ads owned
+      if (!adsRemoved && (mode === 'taxi_classic' || playerVehicleKind === 'taxi')) {
+        void maybeShowInterstitialAfterRound(summary.tripsCompleted, adsRemoved);
+      }
     },
-    [progress.bestRaceTimes, updateProgress],
+    [adsRemoved, mode, playerVehicleKind, progress.bestRaceTimes, updateProgress],
   );
 
   const handleSelectMoto = useCallback(
@@ -630,9 +678,10 @@ export default function App() {
       {gameState === 'TITLE_MENU' && activeTab === 'play' && (
         <div
           id="main-menu"
-          className="relative w-screen h-dvh overflow-hidden flex flex-col justify-between p-4 sm:px-7 sm:py-5"
+          className="relative w-screen min-h-dvh overflow-y-auto flex flex-col justify-between p-4 sm:px-7 sm:py-5"
           style={{
             backgroundColor: '#090d16',
+            paddingBottom: 'calc(1rem + var(--ad-banner-offset, 0px))',
           }}
         >
           {/* Local Night Alexandria Coastal Backdrop Photo + Warm Amber Vignette (Zero External URLs) */}
@@ -701,6 +750,18 @@ export default function App() {
                 <span aria-hidden="true">💰</span>
                 <span>{progress.wallet} ج.م</span>
               </div>
+
+              {!adsRemoved && (
+                <button
+                  type="button"
+                  onClick={handleWatchRewardedAd}
+                  disabled={rewardAdBusy}
+                  className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 border border-emerald-300 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-1.5 transition-all hover:scale-105 shadow-md"
+                >
+                  <Gift className="w-3.5 h-3.5 shrink-0" />
+                  <span>{rewardAdBusy ? 'جاري التحميل...' : `فلوس مجانية +${ADMOB_CONFIG.rewardAmount} ج.م`}</span>
+                </button>
+              )}
 
               <SeaSoundButton />
 
@@ -865,7 +926,10 @@ export default function App() {
         gameState !== 'RACE_SETUP' &&
         gameState !== 'MOTO_GARAGE' &&
         activeTab !== 'play' && (
-        <div className="min-h-dvh flex flex-col bg-[#0B121C]">
+        <div
+          className="min-h-dvh flex flex-col bg-[#0B121C]"
+          style={{ paddingBottom: 'var(--ad-banner-offset, 0px)' }}
+        >
           <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0D1623]/95 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
             <button
               type="button"
@@ -934,10 +998,11 @@ export default function App() {
         return (
           <div
             className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
+            style={{ paddingBottom: 'calc(1rem + var(--ad-banner-offset, 0px))' }}
             role="dialog"
             aria-modal="true"
           >
-            <div className="w-full max-w-2xl rounded-2xl bg-[#0B111A] border-2 border-[#d4af37] shadow-2xl p-4 sm:p-6 space-y-4 my-auto max-h-[94dvh] overflow-y-auto">
+            <div className="w-full max-w-2xl rounded-2xl bg-[#0B111A] border-2 border-[#d4af37] shadow-2xl p-4 sm:p-6 space-y-4 my-auto max-h-[86dvh] overflow-y-auto">
               <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
                 <div className="flex items-start gap-2.5">
                   <button
@@ -958,10 +1023,21 @@ export default function App() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 flex-wrap justify-end shrink-0">
                   <div className="px-2.5 py-1.5 rounded-lg bg-amber-400/15 border border-amber-400/40 text-amber-300 font-mono font-black text-xs tabular-nums">
                     💰 {progress.wallet} ج.م
                   </div>
+                  {!adsRemoved && (
+                    <button
+                      type="button"
+                      onClick={handleWatchRewardedAd}
+                      disabled={rewardAdBusy}
+                      className="px-2.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-slate-950 font-black text-xs flex items-center gap-1 whitespace-nowrap transition-colors"
+                    >
+                      <Gift className="w-3.5 h-3.5 shrink-0" />
+                      <span>+{ADMOB_CONFIG.rewardAmount} ج.م</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setRiderModalOpen(false)}
@@ -972,6 +1048,12 @@ export default function App() {
                   </button>
                 </div>
               </div>
+
+              {billingMessage && (
+                <div className="px-3.5 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/45 text-emerald-200 text-xs font-bold text-center">
+                  {billingMessage}
+                </div>
+              )}
 
               {/* 1. Single Self-Evolving Alexandria Taxi (7 Levels: Easy -> Legendary Hard) */}
               <div className="p-4 rounded-xl bg-[#131f30] border border-[#ffd700]/45 space-y-3">
@@ -1369,7 +1451,10 @@ export default function App() {
           )}
 
           {gameState === 'PAUSED' && (
-            <div className="absolute inset-0 bg-[#0B121C]/65 flex items-center justify-center p-4 z-40">
+            <div
+              className="absolute inset-0 bg-[#0B121C]/65 flex items-center justify-center p-4 z-40 overflow-y-auto"
+              style={{ paddingBottom: 'calc(1rem + var(--ad-banner-offset, 0px))' }}
+            >
                 <div className="w-full max-w-sm rounded-2xl bg-[#090B10] border-2 border-yellow-400 p-6 text-center space-y-4">
                   <div className="flex items-center justify-between gap-2">
                     <button
@@ -1454,7 +1539,10 @@ export default function App() {
 
             {/* End Results & Crash Screen ("شاشة النهاية والإحصائيات / وقعت!") — Black Card with Yellow Border */}
             {gameState === 'GAME_OVER' && lastSummary && (
-              <div className="absolute inset-0 bg-black/88 flex items-center justify-center p-3 sm:p-5 z-30 overflow-y-auto">
+              <div
+                className="absolute inset-0 bg-black/88 flex items-center justify-center p-3 sm:p-5 z-30 overflow-y-auto"
+                style={{ paddingBottom: 'calc(1rem + var(--ad-banner-offset, 0px))' }}
+              >
                 <div className="w-full max-w-md rounded-2xl bg-[#07090D] border-2 border-yellow-400 p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
                   <div className="flex items-start gap-3">
                     {lastSummary.fellDuringStunt ? (
@@ -1556,6 +1644,29 @@ export default function App() {
                     </div>
                   </div>
 
+                  {!adsRemoved && (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={handleWatchRewardedAd}
+                        disabled={rewardAdBusy}
+                        className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 border border-emerald-300 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-colors"
+                      >
+                        <Gift className="w-4 h-4 shrink-0" />
+                        <span>
+                          {rewardAdBusy
+                            ? 'جاري تحميل الإعلان...'
+                            : `شاهد إعلان وخد مكافأة (+${ADMOB_CONFIG.rewardAmount} ج.م)`}
+                        </span>
+                      </button>
+                      {billingMessage && (
+                        <div className="px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs font-bold text-center">
+                          {billingMessage}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div
                     className={`grid gap-2.5 ${
                       lastSummary.raceTrackId || mode === 'superhero' ? 'grid-cols-3' : 'grid-cols-2'
@@ -1612,7 +1723,7 @@ export default function App() {
             )}
         </main>
       )}
-      {!adsRemoved && <div id="google-play-ad-slot" data-ad-slot="active" className="hidden" aria-hidden="true" />}
+      <AdMobBanner adsRemoved={adsRemoved} />
     </div>
   );
 }
