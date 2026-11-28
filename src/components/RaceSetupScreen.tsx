@@ -923,10 +923,7 @@ export const RaceSetupScreen: React.FC<RaceSetupScreenProps> = ({
       </main>
 
       {/* 5. Bottom Wide Glowing Golden Start Race CTA */}
-      <div
-        className="fixed inset-x-0 z-20 p-3 sm:p-4 bg-gradient-to-t from-[#070b14] via-[#070b14]/90 to-transparent"
-        style={{ bottom: 'var(--ad-banner-offset, 0px)' }}
-      >
+      <div className="fixed bottom-0 inset-x-0 z-20 p-3 sm:p-4 bg-gradient-to-t from-[#070b14] via-[#070b14]/90 to-transparent">
         <div className="max-w-3xl mx-auto">
           {selectedBikeUnlocked ? (
             <button

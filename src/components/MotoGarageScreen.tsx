@@ -1093,10 +1093,7 @@ export const MotoGarageScreen: React.FC<MotoGarageScreenProps> = ({
       {/* ======================================================================== */}
       {/* BOTTOM COLLAPSIBLE TUNING DOCK (5 Main Categories + Try Before Buy)      */}
       {/* ======================================================================== */}
-      <section
-        className="absolute inset-x-0 z-20 flex flex-col items-center pointer-events-none px-2 sm:px-4 pb-2 sm:pb-3"
-        style={{ bottom: 'var(--ad-banner-offset, 0px)' }}
-      >
+      <section className="absolute bottom-0 inset-x-0 z-20 flex flex-col items-center pointer-events-none px-2 sm:px-4 pb-2 sm:pb-3">
         {/* Collapse / Expand Handle + Quick Launch when collapsed */}
         <div className="pointer-events-auto flex items-center gap-2 mb-1.5">
           <button

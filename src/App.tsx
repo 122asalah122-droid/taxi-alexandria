@@ -21,25 +21,22 @@ import {
   VolumeX,
   X,
 } from 'lucide-react';
-import { AdMobBanner } from './components/AdMobBanner';
 import { ControlSettingsModal } from './components/ControlSettingsModal';
 import { GameScene3D } from './components/GameScene3D';
 import { GarageView } from './components/GarageView';
 import { LandmarksView } from './components/LandmarksView';
 import { MotoGarageScreen } from './components/MotoGarageScreen';
 import { RaceSetupScreen } from './components/RaceSetupScreen';
-import { RemoveAdsButton } from './components/RemoveAdsButton';
 import { SeaSoundButton } from './components/SeaSoundButton';
 import {
   ADMOB_CONFIG,
+  hideBottomBannerAd,
   initializeAdMob,
   maybeShowInterstitialAfterRound,
   showRewardedAdForBonus,
 } from './game/admob';
 import {
   checkRemoveAdsEntitlement,
-  loadRemoveAdsProductDetails,
-  purchaseRemoveAds,
   syncAdFreeDocumentFlag,
 } from './game/playBilling';
 import {
@@ -167,8 +164,6 @@ export default function App() {
   const [hud, setHud] = useState<HudSnapshot>(INITIAL_HUD);
   const [lastSummary, setLastSummary] = useState<RunSummary | null>(null);
   const [introHintVisible, setIntroHintVisible] = useState(false);
-  const [removeAdsPrice, setRemoveAdsPrice] = useState<string | null>(null);
-  const [billingBusy, setBillingBusy] = useState(false);
   const [rewardAdBusy, setRewardAdBusy] = useState(false);
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
   const billingToastTimerRef = useRef<number | null>(null);
@@ -215,26 +210,21 @@ export default function App() {
     });
   }, []);
 
-  // Keep DOM/wrapper ad-free flag and AdMob SDK synchronized with verified entitlement
+  // Keep DOM/wrapper ad-free flag synchronized, ensure bottom banner stays disabled, and init AdMob for Interstitial/Rewarded
   useEffect(() => {
     syncAdFreeDocumentFlag(adsRemoved);
+    void hideBottomBannerAd();
     if (!adsRemoved) {
       void initializeAdMob(false);
     }
   }, [adsRemoved]);
 
-  // Verify Google Play Billing entitlement (remove_ads) & localized price on startup inside TWA
+  // Honor any previously verified remove_ads Google Play entitlement silently
   useEffect(() => {
     let active = true;
     (async () => {
-      const [entitlement, product] = await Promise.all([
-        checkRemoveAdsEntitlement(),
-        loadRemoveAdsProductDetails(),
-      ]);
+      const entitlement = await checkRemoveAdsEntitlement();
       if (!active) return;
-      if (product.formattedPrice) {
-        setRemoveAdsPrice(product.formattedPrice);
-      }
       if (entitlement.supported) {
         updateProgress((prev) =>
           Boolean(prev.adsRemoved) === entitlement.owned
@@ -250,50 +240,6 @@ export default function App() {
       }
     };
   }, [updateProgress]);
-
-  const handlePurchaseRemoveAds = useCallback(async () => {
-    if (billingBusy || adsRemoved) return;
-    setBillingBusy(true);
-    setBillingMessage(null);
-    try {
-      const result = await purchaseRemoveAds();
-      if (result.status === 'purchased' || result.status === 'already_owned') {
-        updateProgress((prev) => ({ ...prev, adsRemoved: true }));
-        syncAdFreeDocumentFlag(true);
-        showBillingMessage(
-          result.status === 'already_owned'
-            ? 'تمت استعادة عملية الشراء السابقة وإخفاء الإعلانات نهائياً!'
-            : 'شكراً لك! تمت إزالة الإعلانات نهائياً بنجاح.',
-        );
-      } else if (result.status === 'cancelled') {
-        showBillingMessage('تم إلغاء عملية الشراء.');
-      } else {
-        showBillingMessage(result.message);
-      }
-    } finally {
-      setBillingBusy(false);
-    }
-  }, [adsRemoved, billingBusy, showBillingMessage, updateProgress]);
-
-  const handleRestoreRemoveAds = useCallback(async () => {
-    if (billingBusy) return;
-    setBillingBusy(true);
-    setBillingMessage(null);
-    try {
-      const entitlement = await checkRemoveAdsEntitlement();
-      if (!entitlement.supported) {
-        showBillingMessage('استعادة المشتريات تعمل داخل التطبيق الرسمي المثبت من Google Play.');
-      } else if (entitlement.owned) {
-        updateProgress((prev) => ({ ...prev, adsRemoved: true }));
-        syncAdFreeDocumentFlag(true);
-        showBillingMessage('تمت استعادة شرائك بنجاح وإخفاء الإعلانات نهائياً!');
-      } else {
-        showBillingMessage('لا توجد عملية شراء سابقة لمنتج إزالة الإعلانات على هذا الحساب.');
-      }
-    } finally {
-      setBillingBusy(false);
-    }
-  }, [billingBusy, showBillingMessage, updateProgress]);
 
   const handleChangeControls = (next: ControlSettings) => {
     setControls(next);
@@ -681,7 +627,6 @@ export default function App() {
           className="relative w-screen min-h-dvh overflow-y-auto flex flex-col justify-between p-4 sm:px-7 sm:py-5"
           style={{
             backgroundColor: '#090d16',
-            paddingBottom: 'calc(1rem + var(--ad-banner-offset, 0px))',
           }}
         >
           {/* Local Night Alexandria Coastal Backdrop Photo + Warm Amber Vignette (Zero External URLs) */}
@@ -764,14 +709,6 @@ export default function App() {
               )}
 
               <SeaSoundButton />
-
-              <RemoveAdsButton
-                variant="header"
-                adsRemoved={adsRemoved}
-                formattedPrice={removeAdsPrice}
-                busy={billingBusy}
-                onPurchase={handlePurchaseRemoveAds}
-              />
 
               <button
                 type="button"
@@ -926,10 +863,7 @@ export default function App() {
         gameState !== 'RACE_SETUP' &&
         gameState !== 'MOTO_GARAGE' &&
         activeTab !== 'play' && (
-        <div
-          className="min-h-dvh flex flex-col bg-[#0B121C]"
-          style={{ paddingBottom: 'var(--ad-banner-offset, 0px)' }}
-        >
+        <div className="min-h-dvh flex flex-col bg-[#0B121C]">
           <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0D1623]/95 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
             <button
               type="button"
@@ -998,11 +932,10 @@ export default function App() {
         return (
           <div
             className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
-            style={{ paddingBottom: 'calc(1rem + var(--ad-banner-offset, 0px))' }}
             role="dialog"
             aria-modal="true"
           >
-            <div className="w-full max-w-2xl rounded-2xl bg-[#0B111A] border-2 border-[#d4af37] shadow-2xl p-4 sm:p-6 space-y-4 my-auto max-h-[86dvh] overflow-y-auto">
+            <div className="w-full max-w-2xl rounded-2xl bg-[#0B111A] border-2 border-[#d4af37] shadow-2xl p-4 sm:p-6 space-y-4 my-auto max-h-[94dvh] overflow-y-auto">
               <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
                 <div className="flex items-start gap-2.5">
                   <button
@@ -1246,12 +1179,6 @@ export default function App() {
         atmosphere={atmosphere}
         modeTitle={MODE_LABELS[mode]}
         vehicleTitle={VEHICLE_LABELS[playerVehicleKind]}
-        adsRemoved={adsRemoved}
-        removeAdsPrice={removeAdsPrice}
-        billingBusy={billingBusy}
-        billingMessage={billingMessage}
-        onPurchaseRemoveAds={handlePurchaseRemoveAds}
-        onRestoreRemoveAds={handleRestoreRemoveAds}
         onChangeControls={handleChangeControls}
         onChangeAtmosphere={setAtmosphere}
         onStartGo={mode === 'race' ? launchConfiguredRace : launchDrive}
@@ -1451,10 +1378,7 @@ export default function App() {
           )}
 
           {gameState === 'PAUSED' && (
-            <div
-              className="absolute inset-0 bg-[#0B121C]/65 flex items-center justify-center p-4 z-40 overflow-y-auto"
-              style={{ paddingBottom: 'calc(1rem + var(--ad-banner-offset, 0px))' }}
-            >
+            <div className="absolute inset-0 bg-[#0B121C]/65 flex items-center justify-center p-4 z-40 overflow-y-auto">
                 <div className="w-full max-w-sm rounded-2xl bg-[#090B10] border-2 border-yellow-400 p-6 text-center space-y-4">
                   <div className="flex items-center justify-between gap-2">
                     <button
@@ -1539,10 +1463,7 @@ export default function App() {
 
             {/* End Results & Crash Screen ("شاشة النهاية والإحصائيات / وقعت!") — Black Card with Yellow Border */}
             {gameState === 'GAME_OVER' && lastSummary && (
-              <div
-                className="absolute inset-0 bg-black/88 flex items-center justify-center p-3 sm:p-5 z-30 overflow-y-auto"
-                style={{ paddingBottom: 'calc(1rem + var(--ad-banner-offset, 0px))' }}
-              >
+              <div className="absolute inset-0 bg-black/88 flex items-center justify-center p-3 sm:p-5 z-30 overflow-y-auto">
                 <div className="w-full max-w-md rounded-2xl bg-[#07090D] border-2 border-yellow-400 p-5 sm:p-6 space-y-5 shadow-2xl my-auto">
                   <div className="flex items-start gap-3">
                     {lastSummary.fellDuringStunt ? (
@@ -1723,7 +1644,6 @@ export default function App() {
             )}
         </main>
       )}
-      <AdMobBanner adsRemoved={adsRemoved} />
     </div>
   );
 }

@@ -7413,7 +7413,7 @@ export const GameScene3D: React.FC<GameScene3DProps> = ({
           style={{
             paddingLeft: 'max(0.55rem, env(safe-area-inset-left))',
             paddingRight: 'max(0.55rem, env(safe-area-inset-right))',
-            paddingBottom: 'calc(max(0.55rem, env(safe-area-inset-bottom)) + var(--ad-banner-offset, 0px))',
+            paddingBottom: 'max(0.55rem, env(safe-area-inset-bottom))',
           }}
         >
           {/* Left Thumb Zone: Horn + Headlight Toggle + Steering (Transparent outline buttons) */}

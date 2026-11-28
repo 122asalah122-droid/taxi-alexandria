@@ -140,12 +140,12 @@ export async function initializeAdMob(adsRemoved: boolean): Promise<void> {
   }
 }
 
-export async function syncBannerAd(adsRemoved: boolean): Promise<void> {
+/**
+ * Bottom banner ads are disabled; ensure zero bottom spacing and hide any native banner.
+ */
+export async function hideBottomBannerAd(): Promise<void> {
   if (typeof document !== 'undefined') {
-    document.documentElement.style.setProperty(
-      '--ad-banner-offset',
-      adsRemoved ? '0px' : `${ADMOB_CONFIG.bannerHeightPx + 4}px`,
-    );
+    document.documentElement.style.setProperty('--ad-banner-offset', '0px');
   }
 
   if (!isGooglePlayAdMobRuntime()) {
@@ -155,30 +155,12 @@ export async function syncBannerAd(adsRemoved: boolean): Promise<void> {
   const bridge = getNativeBridge();
   const cap = getCapacitorAdMob();
 
-  if (adsRemoved) {
-    try {
-      await bridge?.hideBanner?.();
-      await cap?.removeBanner?.();
-      await cap?.hideBanner?.();
-    } catch {
-      // Ignore native hide errors
-    }
-    return;
-  }
-
-  await initializeAdMob(false);
   try {
-    if (bridge?.showBanner) {
-      await bridge.showBanner(ADMOB_CONFIG.bannerUnitId);
-    } else if (cap?.showBanner) {
-      await cap.showBanner({
-        adId: ADMOB_CONFIG.bannerUnitId,
-        position: 'BOTTOM_CENTER',
-        isTesting: false,
-      });
-    }
+    await bridge?.hideBanner?.();
+    await cap?.removeBanner?.();
+    await cap?.hideBanner?.();
   } catch {
-    // Ignore native banner load errors
+    // Ignore native hide errors
   }
 }
 
